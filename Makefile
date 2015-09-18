@@ -1,12 +1,3 @@
-
-#edisonIsThePilot: edisonIsThePilot.go
-#	GOARCH=386 GOOS=linux go build $< 
-#
-#all: edisonIsThePilot
-#
-#clean:
-#	rm -f edisonIsThePilot
-
 # Makefile for a go project
 #
 # Author: Jon Eisen
