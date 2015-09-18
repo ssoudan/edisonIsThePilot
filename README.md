@@ -13,5 +13,5 @@ This is intended to become an autopilot at some point.
 ## Build the project
 
     $ GOARCH=386 GOOS=linux go get
-	$ GOARCH=386 GOOS=linux go build edisonIsThePilot.go
-	$ scp edisonIsThePilot root@edison.local.:%
+	$ GOARCH=386 GOOS=linux go build cmd/edisonIsThePilot/edisonIsThePilot.go
+	$ scp edisonIsThePilot root@edison.local.:
