@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-18 18:03:19
+* @Last Modified time: 2015-09-19 01:18:49
  */
 
 package main
@@ -26,6 +26,7 @@ package main
 import (
 	"time"
 
+	"github.com/ssoudan/edisonIsThePilot/compass/hmc"
 	"github.com/ssoudan/edisonIsThePilot/gps"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 	"github.com/ssoudan/edisonIsThePilot/pwm"
@@ -61,6 +62,34 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Info("pwm configured")
+
+	////////////////////////////////////////
+	// HMC5883 stuffs
+	////////////////////////////////////////
+	compass := hmc.New(6)
+	for !compass.Begin() {
+
+	}
+
+	// Set measurement range
+	compass.SetRange(hmc.HMC5883L_RANGE_1_3GA)
+
+	// Set measurement mode
+	compass.SetMeasurementMode(hmc.HMC5883L_CONTINOUS)
+
+	// Set data rate
+	compass.SetDataRate(hmc.HMC5883L_DATARATE_3HZ)
+
+	// Set number of samples averaged
+	compass.SetSamples(hmc.HMC5883L_SAMPLES_8)
+
+	// Set calibration offset. See HMC5883L_calibration.ino
+	compass.SetOffset(-82, 72)
+
+	mag, err := compass.ReadNormalize()
+	if err == nil {
+		log.Info("Compass reading is %v", mag)
+	}
 
 	////////////////////////////////////////
 	// I2C stuffs
