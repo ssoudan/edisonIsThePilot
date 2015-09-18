@@ -4,6 +4,8 @@
 
 This is intended to become an autopilot at some point.
 
+For more information about the design check [this](DESIGN.md).
+
 ## Build the toolchain
 
 Useful in case you are on Mac:

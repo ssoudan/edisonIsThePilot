@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-18 17:53:36
+* @Last Modified time: 2015-09-18 18:03:19
  */
 
 package main
@@ -43,7 +43,7 @@ func main() {
 	////////////////////////////////////////
 	// PWM stuffs
 	////////////////////////////////////////
-	var pwm = pwm.Pwm{Pin: 2}
+	var pwm = pwm.New(2)
 	if !pwm.IsExported() {
 		err = pwm.Export()
 		if err != nil {
