@@ -221,6 +221,8 @@ For now, only the [GPRMC](http://aprs.gids.nl/nmea/#rmc) sentence will be used:
     11   = E or W
     12   = Checksum
 
+<!-- TODO(ssoudan) need to also consider the sentence with signal quality for the disengagement feature -->
+
 #### 3.4.4 PID controller
 
 [felixge/pidctrl](https://github.com/felixge/pidctrl)
