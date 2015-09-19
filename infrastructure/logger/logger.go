@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-03-31 21:34:39
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-18 17:53:46
+* @Last Modified time: 2015-09-19 12:03:51
  */
 
 package logger
@@ -43,7 +43,7 @@ func init() {
 
 	// Only errors and more severe messages should be sent to backend1
 	backendLeveled := logging.AddModuleLevel(backendFormatter)
-	backendLeveled.SetLevel(logging.INFO, "")
+	backendLeveled.SetLevel(logging.DEBUG, "")
 
 	// Set the backends to be used.
 	logging.SetBackend(backendLeveled)

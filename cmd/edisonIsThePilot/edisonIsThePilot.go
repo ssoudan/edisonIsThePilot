@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-19 01:18:49
+* @Last Modified time: 2015-09-19 12:15:51
  */
 
 package main
@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/ssoudan/edisonIsThePilot/compass/hmc"
+	"github.com/ssoudan/edisonIsThePilot/gpio"
 	"github.com/ssoudan/edisonIsThePilot/gps"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 	"github.com/ssoudan/edisonIsThePilot/pwm"
@@ -54,7 +55,7 @@ func main() {
 
 	pwm.Disable()
 
-	if err = pwm.SetPeriodAndDutyCycle(50*time.Millisecond, 0.5); err != nil {
+	if err = pwm.SetPeriodAndDutyCycle(100*time.Millisecond, 0.5); err != nil {
 		log.Fatal(err)
 	}
 
@@ -62,6 +63,30 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Info("pwm configured")
+
+	////////////////////////////////////////
+	// GPIO stuffs
+	////////////////////////////////////////
+	var gpio165 = gpio.New(165)
+	if !gpio165.IsExported() {
+		err = gpio165.Export()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	gpio165.SetDirection(gpio.OUT)
+
+	for i := 0; i < 4; i++ {
+		gpio165.Enable()
+		log.Debug("GPIO up")
+		time.Sleep(1 * time.Second)
+		gpio165.Disable()
+		log.Debug("GPIO down")
+		time.Sleep(1 * time.Second)
+	}
+	gpio165.Disable()
+	gpio165.Unexport()
 
 	////////////////////////////////////////
 	// HMC5883 stuffs
