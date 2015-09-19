@@ -189,6 +189,21 @@ We need:
 <!-- TODO(ssoudan) pin map -->
 <!-- TODO(ssoudan) custom lib for GPIO/PWM + references -->
 
+Because once configured as output, GPIO and PWM are only 1.8V, we need to level shift it to 3.3V to drive motor driver.
+For this, we use the following circuit: 
+
+    -------------+---- 3.3v (J20[pin2])
+                 |
+                 /
+                 \ 10k
+    J19[pin2]    /
+    1.8v ref     +--------> output 0-3.3v
+      _www_____|/
+               |\   2N3904
+    input        |
+    0-1.8v ------+
+
+
 - [GPIO configuration](http://www.malinov.com/Home/sergey-s-blog/intelgalileo-programminggpiofromlinux)
 - [GPIO and sysfs](https://www.kernel.org/doc/Documentation/gpio/sysfs.txt)
 
