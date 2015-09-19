@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 17:13:41
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-18 17:53:42
+* @Last Modified time: 2015-09-19 11:12:33
  */
 
 package gps
@@ -60,7 +60,7 @@ func (g GPS) Stream() (chan nmea.SentenceI, chan error) {
 		for true {
 			str, err := bufferedReader.ReadString('\n')
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal(err) // TODO(ssoudan) we cannot fail like this -- need to recover on a new line
 			}
 
 			m, err := nmea.Parse(strings.TrimSuffix(str, "\r\n"))
