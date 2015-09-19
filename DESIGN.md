@@ -3,22 +3,27 @@
 
 <a href="mailto:sebastien.soudan@gmail.com">Sebastien Soudan</a>
 
-## Purpose
+## Problem statement
 
-Heading hold for now.
+For now, we want **a system that can hold the heading by acting on the rudder**.
 
 ## Requirements
 
 - emergency disconnect
 - powerful enough actuator
+- as little button as possible
 - ability to tune/calibrate the system on-board
+  - sinusoidal steering wheel input of know amplitude and frequency -- for different frequencies
+  - record/export track
+  - ability to change the parameters
 
 ## Pitfalls?
 
 - slackness in the steering wheel
 - slackness in the rudder
-- non-linearity of the compass
-- tilt compensation(?)
+- compass issues:
+  - non-linearity of the compass
+  - tilt compensation(?)
 - extreme positions?
 - salty env.
 - power stability
@@ -56,51 +61,75 @@ From [Arduino Forum](http://forum.arduino.cc/index.php?topic=232450.0)
 
 ## Design
 
-    [Autopilot]                    
-                        -------
-                        | gps |
-                        -------
-                           | position
-                           v                                   
-     destination point  -------   heading (sp)  -------------------     actual
-                ---->   | cpu | --------------->| Heading control |---> heading
-                        -------                 ------------------- 
+In this section we describe the system that we will build in the long term.
+
+
+    [Autopilot]
+               
+                 | position                                 | propulsion
+                 v                                          v
+    waypoints |-----| target       |-----------| heading |------| position
+    --------> |     | ---------->  | course    | ------> | boat | --->
+              |-----| course       | autopilot |         |------|  |
+               route               |-----------|                   |
+               execution                   ^                       |
+                                           \-----------------------/
+
+Initially, we will concentrate on the right part of this diagram and design the course 
+autopilot.
+
+    [Course autopilot]
+                   error              heading                          position
+    course  /-----\     |------------|       |----------|    |--------| 
+    ------> |error| --> | Controller | ----> | Steering |--->| vessel |--+-->
+            \-----/     |------------|       |----------|    |--------|  |
+               ^                                                         |
+               |                                                         | 
+               \---------------------------------------------------------/
+
+Though, not quite sure how to compute the error and still have a LTI system - that we can study its stability.
+For the inital phase we will thus focus on the heading control autopilot describe below.
                                                  
     [Heading control]
-                                    rudder angle             actual     
-      heading (sp)   /-----\  e -------   -----------------  heading 
-    ---------------> | +/- | ---| PID |---| rudder | boat |--+---->
-                     \-----/    -------   -----------------  |
-                        ^                                    |
-                        |                                    |
-                        |        ----------                  |
-                        \-------| compass |<-----------------/
-                                 ----------
+                                    
+                                      
+                          error       steering    rudder angle      actual 
+    heading (sp)   /-----\      |-----|      |--------|    |------| heading
+    -------------> | +/- | ---> | PID | ---> | rudder | -> | boat |--+---->
+                   \-----/      |-----|      |--------|    |------|  |
+                      ^                                              |
+                      |                                              |
+                      |       |--------------|                       |
+                      \-------| compass/gps? |<----------------------/
+                              |--------------|
 
-    [Rudder control]
-            rudder angle (sp)  /-----\    -------    ------------------------      rudder angle
-            -----------------> | +/- |--->| PID |--->| motor/steering wheel |----+------>
-                               \-----/    -------    ------------------------    |
-                                  ^                                              |
-                                  |                 --------------------------   |
-                                  \-----------------| rudder position sensor |<--/
-                                                    --------------------------
+// TODO(ssoudan) need to figure out how the steering wheel/rudder system works.
 
+    [Rudder system]
+    steering     |------| rudder angle
+    -----------> |   K  | ----------->
+    angle        |------|
+                 
 
 ### Autopilot
 
 For the first iteration, the heading set point will be defined as the current heading when a button is pressed (heading hold mode).
 
 ### Heading control
+Seems that compass calibration might be required here to prevent non-linear behaviors. It is sensible to pitch and roll and would require a gyro to compensate for this. Also it is sensible to magnetic environnement and would require to be located as far as possible of the engine.
 
-TODO(ssoudan)
+The utilisation of a GPS to get the heading also brings some constraints but we will investiguate this way.
 
-Seems that compass calibration might be required here to prevent non-linear behaviors.
-Would be nice to be able to disable the feedback to be able to experimentally identify the rudder-boat system and tune the PID controller from that. Which means being able to export data (serial interface?).
+*Note:* it would be nice to be able to disable the feedback to be able to experimentally identify the dynamic characteristic of rudder-boat system and tune the PID controller from that. 
+
+**Requirements:**
+
+- Be able to have a sinusoidal steering input of know amplitude
+- Measure the track
+- Be able to export data
 
 ### Rudder control
-Here we probably don't need a PID. A simple P=1 is enough unless we have inertia in the control of the position of the rudder.
-But we need to remove slackness in the chain made of the motor, the rudder and the sensor.
+For now, we will assume we don't need a closed-loop control system here and the existing steering chain is fine. But we need to make sure there is as little  slackness as possible in the chain made of the motor, the steering wheel, and the rudder.
 
 ## Components
 
@@ -108,7 +137,7 @@ But we need to remove slackness in the chain made of the motor, the rudder and t
 
 Could be a RaspberryPi, an Intel Edison, or an Arduino. But for the reason down below, it will be an Edison -- plus would have to change the name of the project.
 
-We need to support: 
+We need to support the following: 
 
 - get messages from the GPS, 
 - be able to write to GPIO (motor direction)
