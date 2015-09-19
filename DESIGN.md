@@ -15,20 +15,25 @@
 
 ## 1. Problem statement
 
-Heading hold for now.
+For now, we want **a system that can hold the heading by acting on the rudder**.
 
 ### 1.1 Requirements
 
 - emergency disconnect
 - powerful enough actuator
+- as little button as possible
 - ability to tune/calibrate the system on-board
+  - sinusoidal steering wheel input of know amplitude and frequency -- for different frequencies
+  - record/export track
+  - ability to change the parameters
 
 ### 1.2 Pitfalls?
 
 - slackness in the steering wheel
 - slackness in the rudder
-- non-linearity of the compass
-- tilt compensation(?)
+- compass issues:
+  - non-linearity of the compass
+  - tilt compensation(?)
 - extreme positions?
 - salty env.
 - power stability
@@ -82,7 +87,8 @@ In this section we describe the system that we will build in the long term.
                execution                   ^                         |
                                            \-------------------------/
 
-The course autopilot in the right part is now described.
+Initially, we will concentrate on the right part of this diagram and design the course 
+autopilot.
 
     [Course autopilot]
                    error              heading                          position
@@ -126,6 +132,10 @@ For the first iteration, the heading set point will be defined as the current he
 <!-- TODO(ssoudan) copy requirements of section 1.1 -->
 
 *Note:* it would be nice to be able to disable the feedback to be able to experimentally identify the dynamic characteristic of rudder-boat system and tune the PID controller from that. 
+
+- Be able to have a sinusoidal steering input of know amplitude
+- Measure the track
+- Be able to export data
 
 TODO(ssoudan)
 
