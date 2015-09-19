@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-19 12:15:51
+* @Last Modified time: 2015-09-19 15:02:05
  */
 
 package main
@@ -26,13 +26,11 @@ package main
 import (
 	"time"
 
-	"github.com/ssoudan/edisonIsThePilot/compass/hmc"
+	// "github.com/ssoudan/edisonIsThePilot/compass/hmc"
 	"github.com/ssoudan/edisonIsThePilot/gpio"
 	"github.com/ssoudan/edisonIsThePilot/gps"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 	"github.com/ssoudan/edisonIsThePilot/pwm"
-
-	// "bitbucket.org/gmcbay/i2c"
 
 	"github.com/adrianmo/go-nmea"
 )
@@ -45,6 +43,10 @@ func main() {
 	////////////////////////////////////////
 	// PWM stuffs
 	////////////////////////////////////////
+	err = gpio.EnablePWM(182)
+	if err != nil {
+		log.Fatal("Failed to set pin 182 to pwm2: %v", err)
+	}
 	var pwm = pwm.New(2)
 	if !pwm.IsExported() {
 		err = pwm.Export()
@@ -55,7 +57,7 @@ func main() {
 
 	pwm.Disable()
 
-	if err = pwm.SetPeriodAndDutyCycle(100*time.Millisecond, 0.5); err != nil {
+	if err = pwm.SetPeriodAndDutyCycle(10*time.Millisecond, 0.5); err != nil {
 		log.Fatal(err)
 	}
 
@@ -63,58 +65,83 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Info("pwm configured")
+	time.Sleep(100 * time.Second)
+
+	pwm.Disable()
+	pwm.Unexport()
 
 	////////////////////////////////////////
 	// GPIO stuffs
 	////////////////////////////////////////
+	err = gpio.EnableGPIO(165)
+	if err != nil {
+		log.Fatal("Failed to set pin 182 to pwm2: %v", err)
+	}
 	var gpio165 = gpio.New(165)
 	if !gpio165.IsExported() {
+		log.Debug("GPIO165 not exported")
 		err = gpio165.Export()
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	gpio165.SetDirection(gpio.OUT)
+	err = gpio165.SetDirection(gpio.OUT)
+	if err != nil {
+		log.Fatal("Failed to set direction: %v", err)
+	}
 
 	for i := 0; i < 4; i++ {
-		gpio165.Enable()
+		err = gpio165.Enable()
+		if err != nil {
+			log.Fatal("Failed to enable: %v", err)
+		}
 		log.Debug("GPIO up")
 		time.Sleep(1 * time.Second)
-		gpio165.Disable()
+		err = gpio165.Disable()
+		if err != nil {
+			log.Fatal("Failed to disable: %v", err)
+		}
 		log.Debug("GPIO down")
 		time.Sleep(1 * time.Second)
 	}
-	gpio165.Disable()
-	gpio165.Unexport()
+	err = gpio165.Disable()
+	if err != nil {
+		log.Fatal("Failed to disable: %v", err)
+	}
+
+	err = gpio165.Unexport()
+	if err != nil {
+		log.Fatal("Failed to unexport: %v", err)
+	}
 
 	////////////////////////////////////////
 	// HMC5883 stuffs
 	////////////////////////////////////////
-	compass := hmc.New(6)
-	for !compass.Begin() {
+	// compass := hmc.New(6)
+	// for !compass.Begin() {
 
-	}
+	// }
 
-	// Set measurement range
-	compass.SetRange(hmc.HMC5883L_RANGE_1_3GA)
+	// // Set measurement range
+	// compass.SetRange(hmc.HMC5883L_RANGE_1_3GA)
 
-	// Set measurement mode
-	compass.SetMeasurementMode(hmc.HMC5883L_CONTINOUS)
+	// // Set measurement mode
+	// compass.SetMeasurementMode(hmc.HMC5883L_CONTINOUS)
 
-	// Set data rate
-	compass.SetDataRate(hmc.HMC5883L_DATARATE_3HZ)
+	// // Set data rate
+	// compass.SetDataRate(hmc.HMC5883L_DATARATE_3HZ)
 
-	// Set number of samples averaged
-	compass.SetSamples(hmc.HMC5883L_SAMPLES_8)
+	// // Set number of samples averaged
+	// compass.SetSamples(hmc.HMC5883L_SAMPLES_8)
 
-	// Set calibration offset. See HMC5883L_calibration.ino
-	compass.SetOffset(-82, 72)
+	// // Set calibration offset. See HMC5883L_calibration.ino
+	// compass.SetOffset(-82, 72)
 
-	mag, err := compass.ReadNormalize()
-	if err == nil {
-		log.Info("Compass reading is %v", mag)
-	}
+	// mag, err := compass.ReadNormalize()
+	// if err == nil {
+	// 	log.Info("Compass reading is %v", mag)
+	// }
 
 	////////////////////////////////////////
 	// I2C stuffs
@@ -149,8 +176,5 @@ func main() {
 			log.Warning("Error while processing GPS message: %v", err)
 		}
 	}
-
-	pwm.Disable()
-	pwm.Unexport()
 
 }

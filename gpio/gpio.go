@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 14:10:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-19 12:15:07
+* @Last Modified time: 2015-09-19 13:34:51
  */
 
 package gpio
@@ -79,7 +79,7 @@ func (p Gpio) Unexport() error {
 
 // SetDirection defines wether this particular GPIO is used for input or output (use constants IN and OUT).
 func (p Gpio) SetDirection(dir string) error {
-	if dir != IN || dir != OUT {
+	if dir != IN && dir != OUT {
 		return fmt.Errorf("Incorrect direction: %s", dir)
 	}
 	return writeTo(fmt.Sprintf("/sys/class/gpio/gpio%d/direction", p.pin), dir)
@@ -87,7 +87,7 @@ func (p Gpio) SetDirection(dir string) error {
 
 // SetActiveLevel set the HIGH or LOW active level for IN direction.
 func (p Gpio) SetActiveLevel(level string) error {
-	if level != ACTIVE_HIGH || level != ACTIVE_LOW {
+	if level != ACTIVE_HIGH && level != ACTIVE_LOW {
 		return fmt.Errorf("Incorrect active level: %s", level)
 	}
 	return writeTo(fmt.Sprintf("/sys/class/gpio/gpio%d/active_low", p.pin), level)
