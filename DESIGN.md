@@ -97,25 +97,25 @@ Not quite sure how to compute the error and still have a LTI system -- that we c
 Thus, for the inital iteration, we will focus on the heading control autopilot describe below.
                                                  
     [Heading control]
-                                    rudder angle             actual     
-      heading (sp)   /-----\  e -------   -----------------  heading 
-    ---------------> | +/- | ---| PID |---| rudder | boat |--+---->
-                     \-----/    -------   -----------------  |
-                        ^                                    |
-                        |                                    |
-                        |        ----------                  |
-                        \-------| compass |<-----------------/
-                                 ----------
+                                    
+                                      
+                          error       steering    rudder angle      actual 
+    heading (sp)   /-----\      |-----|      |--------|    |------| heading
+    -------------> | +/- | ---> | PID | ---> | rudder | -> | boat |--+---->
+                   \-----/      |-----|      |--------|    |------|  |
+                      ^                                              |
+                      |                                              |
+                      |       |--------------|                       |
+                      \-------| compass/gps? |<----------------------/
+                              |--------------|
 
-    [Rudder control]
-            rudder angle (sp)  /-----\    -------    ------------------------      rudder angle
-            -----------------> | +/- |--->| PID |--->| motor/steering wheel |----+------>
-                               \-----/    -------    ------------------------    |
-                                  ^                                              |
-                                  |                 --------------------------   |
-                                  \-----------------| rudder position sensor |<--/
-                                                    --------------------------
+// TODO(ssoudan) need to figure out how the steering wheel/rudder system works.
 
+    [Rudder system]
+    steering     |------| rudder angle
+    -----------> |   K  | ----------->
+    angle        |------|
+                 
 
 ## 3. Heading Control Autopilot
 
