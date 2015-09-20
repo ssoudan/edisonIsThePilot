@@ -18,103 +18,105 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 14:14:03
+* @Last Modified time: 2015-09-20 21:42:36
  */
 
 package main
 
 import (
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	// "github.com/ssoudan/edisonIsThePilot/compass/hmc"
-	"github.com/ssoudan/edisonIsThePilot/gpio"
+	"github.com/ssoudan/edisonIsThePilot/dashboard"
+	// "github.com/ssoudan/edisonIsThePilot/gpio"
 	"github.com/ssoudan/edisonIsThePilot/gps"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 	"github.com/ssoudan/edisonIsThePilot/pilot"
-	"github.com/ssoudan/edisonIsThePilot/pwm"
-
-	"github.com/adrianmo/go-nmea"
+	// "github.com/ssoudan/edisonIsThePilot/pwm"
 )
 
 var log = logger.Log("edisonIsThePilot")
 
 func main() {
-	var err error
+	// var err error
 
 	////////////////////////////////////////
 	// PWM stuffs
 	////////////////////////////////////////
-	err = gpio.EnablePWM(182)
-	if err != nil {
-		log.Fatal("Failed to set pin 182 to pwm2: %v", err)
-	}
-	var pwm = pwm.New(2)
-	if !pwm.IsExported() {
-		err = pwm.Export()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
+	// err = gpio.EnablePWM(182)
+	// if err != nil {
+	// 	log.Fatal("Failed to set pin 182 to pwm2: %v", err)
+	// }
+	// var pwm = pwm.New(2)
+	// if !pwm.IsExported() {
+	// 	err = pwm.Export()
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// }
 
-	pwm.Disable()
+	// pwm.Disable()
 
-	if err = pwm.SetPeriodAndDutyCycle(10*time.Millisecond, 0.5); err != nil {
-		log.Fatal(err)
-	}
+	// if err = pwm.SetPeriodAndDutyCycle(10*time.Millisecond, 0.5); err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	if err = pwm.Enable(); err != nil {
-		log.Fatal(err)
-	}
-	log.Info("pwm configured")
-	time.Sleep(100 * time.Second)
+	// if err = pwm.Enable(); err != nil {
+	// 	log.Fatal(err)
+	// }
+	// log.Info("pwm configured")
+	// time.Sleep(100 * time.Second)
 
-	pwm.Disable()
-	pwm.Unexport()
+	// pwm.Disable()
+	// pwm.Unexport()
 
 	////////////////////////////////////////
 	// GPIO stuffs
 	////////////////////////////////////////
-	err = gpio.EnableGPIO(165)
-	if err != nil {
-		log.Fatal("Failed to set pin 182 to pwm2: %v", err)
-	}
-	var gpio165 = gpio.New(165)
-	if !gpio165.IsExported() {
-		log.Debug("GPIO165 not exported")
-		err = gpio165.Export()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
+	// err = gpio.EnableGPIO(165)
+	// if err != nil {
+	// 	log.Fatal("Failed to set pin 182 to pwm2: %v", err)
+	// }
+	// var gpio165 = gpio.New(165)
+	// if !gpio165.IsExported() {
+	// 	log.Debug("GPIO165 not exported")
+	// 	err = gpio165.Export()
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// }
 
-	err = gpio165.SetDirection(gpio.OUT)
-	if err != nil {
-		log.Fatal("Failed to set direction: %v", err)
-	}
+	// err = gpio165.SetDirection(gpio.OUT)
+	// if err != nil {
+	// 	log.Fatal("Failed to set direction: %v", err)
+	// }
 
-	for i := 0; i < 4; i++ {
-		err = gpio165.Enable()
-		if err != nil {
-			log.Fatal("Failed to enable: %v", err)
-		}
-		log.Debug("GPIO up")
-		time.Sleep(1 * time.Second)
-		err = gpio165.Disable()
-		if err != nil {
-			log.Fatal("Failed to disable: %v", err)
-		}
-		log.Debug("GPIO down")
-		time.Sleep(1 * time.Second)
-	}
-	err = gpio165.Disable()
-	if err != nil {
-		log.Fatal("Failed to disable: %v", err)
-	}
+	// for i := 0; i < 4; i++ {
+	// 	err = gpio165.Enable()
+	// 	if err != nil {
+	// 		log.Fatal("Failed to enable: %v", err)
+	// 	}
+	// 	log.Debug("GPIO up")
+	// 	time.Sleep(1 * time.Second)
+	// 	err = gpio165.Disable()
+	// 	if err != nil {
+	// 		log.Fatal("Failed to disable: %v", err)
+	// 	}
+	// 	log.Debug("GPIO down")
+	// 	time.Sleep(1 * time.Second)
+	// }
+	// err = gpio165.Disable()
+	// if err != nil {
+	// 	log.Fatal("Failed to disable: %v", err)
+	// }
 
-	err = gpio165.Unexport()
-	if err != nil {
-		log.Fatal("Failed to unexport: %v", err)
-	}
+	// err = gpio165.Unexport()
+	// if err != nil {
+	// 	log.Fatal("Failed to unexport: %v", err)
+	// }
 
 	////////////////////////////////////////
 	// HMC5883 stuffs
@@ -158,38 +160,54 @@ func main() {
 	// data, err := bp.ReadByteBlock(addr, reg, length)
 
 	////////////////////////////////////////
+	// a beautiful dashboard
+	////////////////////////////////////////
+	dashboard := dashboard.New()
+	dashboardChan := make(chan interface{})
+	dashboard.SetInputChan(dashboardChan)
+
+	////////////////////////////////////////
 	// pilot stuffs
 	////////////////////////////////////////
-	thePilot := pilot.Pilot{}
-	// pilot set heading ref
-	// set bounds
+	thePilot := pilot.New(15.)
+	pilotChan := make(chan interface{})
+	thePilot.SetInputChan(pilotChan)
+	thePilot.SetDashboardChan(dashboardChan)
 
 	////////////////////////////////////////
 	// gps stuffs
 	////////////////////////////////////////
 	gps := gps.New("/dev/ttyMFD1")
-	messagesChan, errorChan := gps.Stream()
+	gps.SetMessagesChan(pilotChan)
+	gps.SetErrorChan(pilotChan)
 
-	for {
-		select {
-		// TODO(ssoudan) add a timeout for the lack of message error case
-		case m := <-messagesChan:
-			switch t := m.(type) {
-			default:
-				// don't care
-				log.Debug("%+v\n", m)
-			case nmea.GPRMC:
-				log.Info("[GPRMC] validity: %v heading: %v[˚] speed: %v[knots] \n", t.Validity == "A", t.Course, t.Speed)
-				//
-				thePilot.UpdateFeedback(pilot.GPSFeedBack{t.Course, t.Validity == "A", t.Speed})
-				// TODO(ssoudan) make sure the alarm state is propagated
+	gps.Start()
+	dashboard.Start()
+	thePilot.Start()
 
-			}
-		case err := <-errorChan:
-			log.Warning("Error while processing GPS message: %v", err)
-			// TODO(ssoudan) update thePilot with the GPS error
-
+	// For tests
+	go func() {
+		for {
+			log.Notice("Disabling the pilot")
+			thePilot.Disable()
+			time.Sleep(35 * time.Second)
+			log.Notice("Enabling the pilot")
+			thePilot.Enable()
+			time.Sleep(35 * time.Second)
 		}
-	}
+	}()
 
+	// Wait until we receive a signal
+	waitForInterrupt()
+
+}
+
+func waitForInterrupt() {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	select {
+	case <-sigChan:
+		log.Info("Interrupted - exiting")
+		os.Exit(255)
+	}
 }

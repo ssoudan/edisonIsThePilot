@@ -2,36 +2,43 @@
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 16:52:46
+* @Last Modified time: 2015-09-20 21:59:14
  */
 
 package pilot
 
 import (
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
+	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 )
 
-type Pilot struct {
-	alarm   Alarm
-	heading float64
-	bound   float64
-	enabled bool
+var log = logger.Log("pilot")
 
-	dashboardChannel chan dashboard.Message
+type Pilot struct {
+	heading float64 // target heading (set point)
+	bound   float64
+
+	alarm      Alarm
+	enabled    bool
+	headingSet bool
 
 	leds map[string]bool
+
+	// channels with the other components
+	dashboardChan chan interface{}
+	inputChan     chan interface{}
 }
 
 type Leds map[Led]bool
 type Led string
 
-type GPSFeedBack struct {
-	Heading  float64
-	Validity bool
-	Speed    float64
-}
-
 type FixStatus byte
+
+const (
+	NOFIX    = 0
+	FIX      = 1
+	DGPS_FIX = 2
+)
 
 func checkFixStatus(fix FixStatus) (alarm Alarm, ledEnabled bool) {
 	alarm = Alarm(UNRAISED)
@@ -49,12 +56,6 @@ func checkFixStatus(fix FixStatus) (alarm Alarm, ledEnabled bool) {
 
 	return
 }
-
-const (
-	NOFIX    = 0
-	FIX      = 1
-	DGPS_FIX = 2
-)
 
 func (p *Pilot) checkHeadingError(headingError float64) Alarm {
 
@@ -77,7 +78,21 @@ func computeHeadingError(heading float64, gpsHeading float64) float64 {
 	return headingError
 }
 
-func (p *Pilot) UpdateFixStatus(fix FixStatus) {
+func New(bound float64) *Pilot {
+	return &Pilot{
+		leds:  make(map[string]bool),
+		bound: bound}
+}
+
+func (p *Pilot) SetDashboardChan(c chan interface{}) {
+	p.dashboardChan = c
+}
+
+func (p *Pilot) SetInputChan(c chan interface{}) {
+	p.inputChan = c
+}
+
+func (p *Pilot) updateFixStatus(fix FixStatus) {
 	// compute the update for fix status
 	fixAlarm, fixLed := checkFixStatus(fix)
 
@@ -90,16 +105,23 @@ func (p *Pilot) UpdateFixStatus(fix FixStatus) {
 	if fixLed {
 		p.leds[dashboard.NoGPSFix] = true
 	} else {
-		delete(p.leds, dashboard.NoGPSFix)
+		p.leds[dashboard.NoGPSFix] = false
 	}
 
 	/////////////////////////
 	// Tell the world
 	/////////////////////////
-	p.dashboardChannel <- dashboard.NewMessage(p.leds)
+	p.dashboardChan <- dashboard.NewMessage(p.leds)
 }
 
-func (p *Pilot) UpdateFeedback(gpsHeading GPSFeedBack) {
+func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
+
+	// Set the heading with the current GPS heading if it has not been set before
+	if p.enabled && !p.headingSet {
+		log.Info("Heading to %v", gpsHeading.Heading)
+		p.heading = gpsHeading.Heading
+		p.headingSet = true
+	}
 
 	// TODO(ssoudan) do something with the validity
 
@@ -112,6 +134,9 @@ func (p *Pilot) UpdateFeedback(gpsHeading GPSFeedBack) {
 	/////////////////////////
 	// Update pilot state from previous checks
 	////////////////////////
+	if p.enabled {
+		log.Notice("Heading error is %v", headingError)
+	}
 
 	// Update alarm state from the previously computed alarms
 	p.alarm = Alarm(p.enabled) && headingAlarm // || blah
@@ -119,19 +144,59 @@ func (p *Pilot) UpdateFeedback(gpsHeading GPSFeedBack) {
 	// Update alarm state from the previously computed alarms
 	steeringEnabled := p.computeSteeringState()
 
+	if bool(headingAlarm) && p.enabled {
+		p.leds[dashboard.HeadingErrorOutOfBounds] = true
+	} else {
+		p.leds[dashboard.HeadingErrorOutOfBounds] = false
+	}
+
 	/////////////////////////
 	// Tell the world
 	/////////////////////////
 	if steeringEnabled {
+		log.Notice("Steering Enabled")
+
 		// TODO(ssoudan) do something with the heading error
 
 		// TODO(ssoudan) call the PID
 
 		// TODO(ssoudan) check the PID output
+	} else {
+		log.Notice("Steering Disabled")
 	}
 
 	// p.tellTheWorld()
-	p.dashboardChannel <- dashboard.NewMessage(p.leds)
+	p.dashboardChan <- dashboard.NewMessage(p.leds)
+}
+
+func (p Pilot) Start() chan interface{} {
+	go func() {
+
+		for {
+			select {
+			case m := <-p.inputChan:
+				switch m := m.(type) {
+				case FixStatus:
+					p.updateFixStatus(m)
+				case GPSFeedBackAction:
+					p.updateFeedback(m)
+				case EnableAction:
+					p.enable()
+				case DisableAction:
+					p.disable()
+				case error:
+					log.Error("Received an error: %v", m)
+				}
+			}
+		}
+
+	}()
+
+	return p.inputChan
+}
+
+func (p Pilot) computeSteeringState() bool {
+	return p.enabled && !bool(p.alarm)
 }
 
 const (
@@ -140,10 +205,6 @@ const (
 )
 
 type InputStatus bool
-
-func (p Pilot) computeSteeringState() bool {
-	return p.enabled && !bool(p.alarm)
-}
 
 func validateInput(bound, headingError float64) InputStatus {
 	if -bound > headingError || bound < headingError {

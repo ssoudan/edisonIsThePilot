@@ -2,22 +2,80 @@
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 16:09:19
+* @Last Modified time: 2015-09-20 21:44:39
  */
 
 package pilot
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+func TestThatHeadingIsSetWithFirstGPSHeadingAfterItHasBeenEnabled(t *testing.T) {
+
+	c := make(chan interface{})
+
+	go func() {
+		for true {
+			<-c
+		}
+	}()
+
+	pilot := Pilot{
+		alarm:         UNRAISED,
+		bound:         45,
+		leds:          make(map[string]bool),
+		dashboardChan: c,
+		inputChan:     make(chan interface{})}
+
+	// pilot.Start()
+	pilot.enable()
+
+	assert.EqualValues(t, false, pilot.headingSet, "heading need to be set during first updateFeedback")
+
+	gpsHeadingStep1 := 180.
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep1})
+
+	assert.EqualValues(t, true, pilot.headingSet, "heading has been set to first gpsHeading")
+	assert.EqualValues(t, gpsHeadingStep1, pilot.heading, "heading has been set to first gpsHeading")
+
+	gpsHeading := 170.
+
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading})
+
+	assert.EqualValues(t, true, pilot.headingSet, "heading has been set to first gpsHeading")
+	assert.EqualValues(t, gpsHeadingStep1, pilot.heading, "heading has been set to first gpsHeading")
+
+}
 
 func TestThatOutOfBoundsGPSInputRaisesAnAlarm(t *testing.T) {
 
-	pilot := Pilot{alarm: UNRAISED, heading: 112., bound: 45, enabled: true}
+	c := make(chan interface{})
+
+	go func() {
+		for true {
+			<-c
+		}
+	}()
+
+	pilot := Pilot{
+		alarm:         UNRAISED,
+		bound:         45,
+		leds:          make(map[string]bool),
+		dashboardChan: c,
+		inputChan:     make(chan interface{})}
+
+	// pilot.Start()
+	pilot.enable()
+
 	gpsHeading := 180.
-	pilot.UpdateFeedback(GPSFeedBack{Heading: gpsHeading})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading})
+
+	gpsHeading = 110.
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading})
 
 	expected := RAISED
 	result := pilot.alarm
