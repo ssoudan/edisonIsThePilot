@@ -2,7 +2,7 @@
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 21:59:14
+* @Last Modified time: 2015-09-20 22:08:29
  */
 
 package pilot
@@ -32,35 +32,10 @@ type Pilot struct {
 type Leds map[Led]bool
 type Led string
 
-type FixStatus byte
-
-const (
-	NOFIX    = 0
-	FIX      = 1
-	DGPS_FIX = 2
-)
-
-func checkFixStatus(fix FixStatus) (alarm Alarm, ledEnabled bool) {
-	alarm = Alarm(UNRAISED)
-	ledEnabled = false
-
-	switch fix {
-	case NOFIX:
-
-		alarm = RAISED
-		ledEnabled = true
-
-	case FIX, DGPS_FIX:
-		// blah
-	}
-
-	return
-}
-
 func (p *Pilot) checkHeadingError(headingError float64) Alarm {
 
 	inputStatus := validateInput(p.bound, headingError)
-	return computeAlarmState(p.alarm, inputStatus)
+	return computeAlarmStateForInputStatus(p.alarm, inputStatus)
 
 }
 
@@ -94,7 +69,7 @@ func (p *Pilot) SetInputChan(c chan interface{}) {
 
 func (p *Pilot) updateFixStatus(fix FixStatus) {
 	// compute the update for fix status
-	fixAlarm, fixLed := checkFixStatus(fix)
+	fixAlarm, fixLed := validateFixStatus(fix)
 
 	/////////////////////////
 	// Update pilot state from previous checks
@@ -169,6 +144,7 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 	p.dashboardChan <- dashboard.NewMessage(p.leds)
 }
 
+// Start the event loop of the Pilot component
 func (p Pilot) Start() chan interface{} {
 	go func() {
 
@@ -199,36 +175,9 @@ func (p Pilot) computeSteeringState() bool {
 	return p.enabled && !bool(p.alarm)
 }
 
-const (
-	INVALID = false
-	VALID   = true
-)
-
-type InputStatus bool
-
-func validateInput(bound, headingError float64) InputStatus {
-	if -bound > headingError || bound < headingError {
-		return INVALID
-	}
-
-	return VALID
-}
-
 type Alarm bool
 
 const (
 	RAISED   = true
 	UNRAISED = false
 )
-
-func computeAlarmState(previousState Alarm, input InputStatus) Alarm {
-	if previousState == RAISED {
-		return RAISED
-	}
-
-	if input == INVALID {
-		return RAISED
-	}
-
-	return UNRAISED
-}

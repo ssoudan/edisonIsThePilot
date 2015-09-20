@@ -2,7 +2,7 @@
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 14:27:34
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 16:22:20
+* @Last Modified time: 2015-09-20 22:07:47
  */
 
 package pilot
@@ -37,7 +37,7 @@ func checkNoFixCase(t *testing.T, c fixCase) {
 
 	fix := c.fix
 
-	alarm, led := checkFixStatus(FixStatus(fix))
+	alarm, led := validateFixStatus(FixStatus(fix))
 
 	assert.EqualValues(t, c.expectedAlarm, alarm, fmt.Sprintf("\"%s\" [alarm] case failed", c.description))
 
