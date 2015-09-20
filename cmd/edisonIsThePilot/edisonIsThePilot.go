@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-19 15:02:05
+* @Last Modified time: 2015-09-20 14:14:03
  */
 
 package main
@@ -30,6 +30,7 @@ import (
 	"github.com/ssoudan/edisonIsThePilot/gpio"
 	"github.com/ssoudan/edisonIsThePilot/gps"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
+	"github.com/ssoudan/edisonIsThePilot/pilot"
 	"github.com/ssoudan/edisonIsThePilot/pwm"
 
 	"github.com/adrianmo/go-nmea"
@@ -157,6 +158,13 @@ func main() {
 	// data, err := bp.ReadByteBlock(addr, reg, length)
 
 	////////////////////////////////////////
+	// pilot stuffs
+	////////////////////////////////////////
+	thePilot := pilot.Pilot{}
+	// pilot set heading ref
+	// set bounds
+
+	////////////////////////////////////////
 	// gps stuffs
 	////////////////////////////////////////
 	gps := gps.New("/dev/ttyMFD1")
@@ -164,6 +172,7 @@ func main() {
 
 	for {
 		select {
+		// TODO(ssoudan) add a timeout for the lack of message error case
 		case m := <-messagesChan:
 			switch t := m.(type) {
 			default:
@@ -171,9 +180,15 @@ func main() {
 				log.Debug("%+v\n", m)
 			case nmea.GPRMC:
 				log.Info("[GPRMC] validity: %v heading: %v[˚] speed: %v[knots] \n", t.Validity == "A", t.Course, t.Speed)
+				//
+				thePilot.UpdateFeedback(pilot.GPSFeedBack{t.Course, t.Validity == "A", t.Speed})
+				// TODO(ssoudan) make sure the alarm state is propagated
+
 			}
 		case err := <-errorChan:
 			log.Warning("Error while processing GPS message: %v", err)
+			// TODO(ssoudan) update thePilot with the GPS error
+
 		}
 	}
 

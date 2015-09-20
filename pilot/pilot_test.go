@@ -2,7 +2,7 @@
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 12:09:46
+* @Last Modified time: 2015-09-20 16:09:19
  */
 
 package pilot
@@ -15,9 +15,9 @@ import (
 
 func TestThatOutOfBoundsGPSInputRaisesAnAlarm(t *testing.T) {
 
-	pilot := Pilot{alarm: UNRAISED, heading: 112., bound: 45}
+	pilot := Pilot{alarm: UNRAISED, heading: 112., bound: 45, enabled: true}
 	gpsHeading := 180.
-	pilot.UpdateInput(gpsHeading)
+	pilot.UpdateFeedback(GPSFeedBack{Heading: gpsHeading})
 
 	expected := RAISED
 	result := pilot.alarm
@@ -37,14 +37,14 @@ func checkHeadingCase(t *testing.T, c headingCase) {
 	pilot := Pilot{heading: c.heading}
 
 	expected := c.expected
-	result := pilot.computeHeadingError(c.gpsHeading)
+	result := computeHeadingError(pilot.heading, c.gpsHeading)
 
 	assert.EqualValues(t, expected, result, fmt.Sprintf("\"%s\" case failed", c.description))
 }
 
 func TestHeadingErrorComputation(t *testing.T) {
 	cases := []headingCase{
-		headingCase{gpsHeading: 140., expected: 140., description: "heading not explicit set"},
+		headingCase{ /* heading not set*/ gpsHeading: 140., expected: 140., description: "heading not explicit set"},
 		headingCase{heading: 0., gpsHeading: 0., expected: 0., description: "heading equals gpsHeading"},
 		headingCase{heading: 1., gpsHeading: 2., expected: 1., description: "heading NE quadrant, gpsHeading NE quadrant"},
 		headingCase{heading: 1., gpsHeading: 339., expected: -22., description: "heading NE quadrant, gpsHeading NW quadrant"},

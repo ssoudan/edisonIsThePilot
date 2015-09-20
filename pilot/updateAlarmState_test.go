@@ -2,7 +2,7 @@
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 12:07:14
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 12:09:09
+* @Last Modified time: 2015-09-20 15:45:05
  */
 
 package pilot
@@ -15,7 +15,7 @@ import (
 func TestThatInvalidStatusLeadsToAnAlarm(t *testing.T) {
 	previousState := Alarm(UNRAISED)
 	input := InputStatus(INVALID)
-	nextState := updateAlarmState(previousState, input)
+	nextState := computeAlarmState(previousState, input)
 
 	expected := RAISED
 
@@ -25,7 +25,7 @@ func TestThatInvalidStatusLeadsToAnAlarm(t *testing.T) {
 func TestThatInvalidStatusLeadsToAnAlarmWhenAlreadyRAISED(t *testing.T) {
 	previousState := Alarm(RAISED)
 	input := InputStatus(INVALID)
-	nextState := updateAlarmState(previousState, input)
+	nextState := computeAlarmState(previousState, input)
 
 	expected := RAISED
 
@@ -35,7 +35,7 @@ func TestThatInvalidStatusLeadsToAnAlarmWhenAlreadyRAISED(t *testing.T) {
 func TestThatValidStatusLeadsToAnAlarmWhenAlreadyRAISED(t *testing.T) {
 	previousState := Alarm(RAISED)
 	input := InputStatus(VALID)
-	nextState := updateAlarmState(previousState, input)
+	nextState := computeAlarmState(previousState, input)
 
 	expected := RAISED
 
@@ -51,7 +51,7 @@ func TestThatValidInputLeavesUnraisedAlarmUnraised(t *testing.T) {
 	input = VALID
 
 	expected := UNRAISED
-	result := updateAlarmState(previousState, input)
+	result := computeAlarmState(previousState, input)
 
 	assert.EqualValues(t, expected, result)
 }
