@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 17:13:41
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 21:45:01
+* @Last Modified time: 2015-09-20 23:56:07
  */
 
 package gps
@@ -63,23 +63,18 @@ func (g *GPS) SetErrorChan(c chan interface{}) {
 func (g GPS) doReceiveGPSMessages() {
 	c := &serial.Config{Name: g.deviceName, Baud: g.baud}
 
-	var err error
-	var s *serial.Port
+	s, err := serial.OpenPort(c)
+	if err != nil {
+		log.Error("Failed to open serial port: %v", err)
+		g.errorChan <- err
 
-	//
-	for s == nil {
-		s, err = serial.OpenPort(c)
-		if err != nil {
-			log.Error("Failed to open serial port: %v", err)
-			g.errorChan <- err
-
-			time.Sleep(1 * time.Second)
-		}
+		return
 	}
 
-	bufferedReader := bufio.NewReader(s)
 	// Close the serial port when we have to leave this method
 	defer s.Close()
+
+	bufferedReader := bufio.NewReader(s)
 
 	for true {
 		str, err := bufferedReader.ReadString('\n')
@@ -95,26 +90,28 @@ func (g GPS) doReceiveGPSMessages() {
 			g.errorChan <- err
 			// Here we don't return as it is a non-fatal error and the next line
 			// will be better
-		} else {
+			continue
+		}
 
-			switch t := m.(type) {
-			default:
-				// don't care
-				// log.Debug("%+v\n", m)
+		switch t := m.(type) {
+		default:
+			// don't care
+			// log.Debug("%+v\n", m)
+		case nmea.GPGGA:
+			fix, err := strconv.Atoi(t.FixQuality)
+			if err != nil {
+				log.Error("Failed to parse FixQuality [%s] : %v", t.FixQuality, err)
 
-			case nmea.GPGGA:
-				fix, err := strconv.Atoi(t.FixQuality)
-				if err != nil {
-					log.Error("Failed to parse FixQuality [%s] : %v", t.FixQuality, err)
-
-				} else {
-					log.Info("[GPGGA] fixQuality: %v \n", fix)
-					g.messagesChan <- pilot.FixStatus(fix)
-				}
-
-			case nmea.GPRMC:
-				log.Info("[GPRMC] validity: %v heading: %v[˚] speed: %v[knots] \n", t.Validity == "A", t.Course, t.Speed)
-				g.messagesChan <- pilot.GPSFeedBackAction{t.Course, t.Validity == "A", t.Speed}
+			} else {
+				log.Info("[GPGGA] fixQuality: %v \n", fix)
+				g.messagesChan <- pilot.FixStatus(fix)
+			}
+		case nmea.GPRMC:
+			log.Info("[GPRMC] validity: %v heading: %v[˚] speed: %v[knots] \n", t.Validity == "A", t.Course, t.Speed)
+			g.messagesChan <- pilot.GPSFeedBackAction{
+				Heading:  t.Course,
+				Validity: t.Validity == "A",
+				Speed:    t.Speed,
 			}
 		}
 	}

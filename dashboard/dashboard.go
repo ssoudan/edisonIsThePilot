@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 16:30:19
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 23:25:23
+* @Last Modified time: 2015-09-20 23:51:35
  */
 
 package dashboard
@@ -33,7 +33,6 @@ const (
 	SpeedTooLow             = "SpeedTooLow"
 	HeadingErrorOutOfBounds = "HeadingErrorOutOfBounds"
 	CorrectionAtLimit       = "CorrectionAtLimit"
-	NoLed                   = ""
 )
 
 var log = logger.Log("dashboard")

@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 23:07:01
+* @Last Modified time: 2015-09-20 23:51:58
  */
 
 package main
@@ -47,7 +47,6 @@ var messageToPin = map[string]byte{
 	// dashboard.SpeedTooLow:             2,
 	// dashboard.HeadingErrorOutOfBounds: 3,
 	// dashboard.CorrectionAtLimit:       4,
-	// dashboard.NoLed:                   5,
 }
 
 func main() {
@@ -82,15 +81,6 @@ func main() {
 
 	// pwm.Disable()
 	// pwm.Unexport()
-
-	////////////////////////////////////////
-	// GPIO stuffs
-	////////////////////////////////////////
-
-	// err = gpio165.Unexport()
-	// if err != nil {
-	// 	log.Fatal("Failed to unexport: %v", err)
-	// }
 
 	////////////////////////////////////////
 	// HMC5883 stuffs
