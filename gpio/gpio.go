@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 14:10:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 12:00:39
+* @Last Modified time: 2015-09-20 22:35:57
  */
 
 package gpio
@@ -69,7 +69,7 @@ func (p Gpio) IsExported() bool {
 
 // Export the gpio to be usable from sysfs.
 func (p Gpio) Export() error {
-	return writeTo("/sys/class/gpio//export", fmt.Sprintf("%d", p.pin))
+	return writeTo("/sys/class/gpio/export", fmt.Sprintf("%d", p.pin))
 }
 
 // Unexport the gpio from sysfs.

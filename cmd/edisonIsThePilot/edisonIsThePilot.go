@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 21:42:36
+* @Last Modified time: 2015-09-20 23:07:01
  */
 
 package main
@@ -31,7 +31,7 @@ import (
 
 	// "github.com/ssoudan/edisonIsThePilot/compass/hmc"
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
-	// "github.com/ssoudan/edisonIsThePilot/gpio"
+	"github.com/ssoudan/edisonIsThePilot/gpio"
 	"github.com/ssoudan/edisonIsThePilot/gps"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 	"github.com/ssoudan/edisonIsThePilot/pilot"
@@ -39,6 +39,16 @@ import (
 )
 
 var log = logger.Log("edisonIsThePilot")
+
+var messageToPin = map[string]byte{
+	dashboard.NoGPSFix: 168,
+	// TODO(ssoudan) fix the mapping
+	// dashboard.InvalidGPSData:          1,
+	// dashboard.SpeedTooLow:             2,
+	// dashboard.HeadingErrorOutOfBounds: 3,
+	// dashboard.CorrectionAtLimit:       4,
+	// dashboard.NoLed:                   5,
+}
 
 func main() {
 	// var err error
@@ -76,42 +86,6 @@ func main() {
 	////////////////////////////////////////
 	// GPIO stuffs
 	////////////////////////////////////////
-	// err = gpio.EnableGPIO(165)
-	// if err != nil {
-	// 	log.Fatal("Failed to set pin 182 to pwm2: %v", err)
-	// }
-	// var gpio165 = gpio.New(165)
-	// if !gpio165.IsExported() {
-	// 	log.Debug("GPIO165 not exported")
-	// 	err = gpio165.Export()
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// }
-
-	// err = gpio165.SetDirection(gpio.OUT)
-	// if err != nil {
-	// 	log.Fatal("Failed to set direction: %v", err)
-	// }
-
-	// for i := 0; i < 4; i++ {
-	// 	err = gpio165.Enable()
-	// 	if err != nil {
-	// 		log.Fatal("Failed to enable: %v", err)
-	// 	}
-	// 	log.Debug("GPIO up")
-	// 	time.Sleep(1 * time.Second)
-	// 	err = gpio165.Disable()
-	// 	if err != nil {
-	// 		log.Fatal("Failed to disable: %v", err)
-	// 	}
-	// 	log.Debug("GPIO down")
-	// 	time.Sleep(1 * time.Second)
-	// }
-	// err = gpio165.Disable()
-	// if err != nil {
-	// 	log.Fatal("Failed to disable: %v", err)
-	// }
 
 	// err = gpio165.Unexport()
 	// if err != nil {
@@ -165,6 +139,32 @@ func main() {
 	dashboard := dashboard.New()
 	dashboardChan := make(chan interface{})
 	dashboard.SetInputChan(dashboardChan)
+	mapMessageToGPIO := func(message string, pin byte) gpio.Gpio {
+
+		// kill the process (via log.Fatal) in case we can't create the GPIO
+		err := gpio.EnableGPIO(pin)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var g = gpio.New(pin)
+		if !g.IsExported() {
+			err = g.Export()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		err = g.SetDirection(gpio.OUT)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return g
+	}
+	for k, v := range messageToPin {
+		dashboard.RegisterMessageHandler(k, mapMessageToGPIO(k, v))
+	}
 
 	////////////////////////////////////////
 	// pilot stuffs
@@ -200,6 +200,7 @@ func main() {
 	// Wait until we receive a signal
 	waitForInterrupt()
 
+	dashboard.Shutdown()
 }
 
 func waitForInterrupt() {

@@ -21,14 +21,14 @@ GOCMD=$(FLAGS) go
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOINSTALL=$(GOCMD) install
-GOTEST=go test
+GOTEST=go test -cover
 GODEP=$(GOCMD) test -i
 GOFMT=gofmt -w
 
 # Package lists
 TOPLEVEL_PKG := github.com/ssoudan/edisonIsThePilot
 INT_LIST :=  #<-- Interface directories
-IMPL_LIST := pilot gps infrastructure/logger pwm gpio compass/hmc #<-- Implementation directories
+IMPL_LIST := dashboard pilot gps infrastructure/logger pwm gpio compass/hmc #<-- Implementation directories
 CMD_LIST := cmd/edisonIsThePilot #<-- Command directories
 
 # List building
