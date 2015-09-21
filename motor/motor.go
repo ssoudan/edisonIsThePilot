@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 18:58:22
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 20:11:18
+* @Last Modified time: 2015-09-21 21:10:36
  */
 
 package motor
@@ -106,7 +106,7 @@ func (m Motor) Disable() error {
 	return m.sleepGPIO.Enable()
 }
 
-func (m Motor) Move(clockwise bool, speedInStepBySeconds uint32, duration time.Duration) error {
+func (m Motor) Move(clockwise bool, stepsBySecond uint32, duration time.Duration) error {
 	var err error
 	if clockwise {
 		err = m.dirGPIO.Enable()
@@ -122,15 +122,15 @@ func (m Motor) Move(clockwise bool, speedInStepBySeconds uint32, duration time.D
 		}
 	}
 
-	period := time.Duration(1. / float64(speedInStepBySeconds) * float64(time.Second))
-	if period < 104.*time.Nanosecond {
+	period := time.Duration(1. / float64(stepsBySecond) * float64(time.Second))
+	if period < pwm.MinPeriod {
 		originalPeriod := period
-		period = 104. * time.Nanosecond
+		period = pwm.MinPeriod
 		log.Warning("period out of bounds: changed from %d to %d", originalPeriod, period)
 	}
-	if period > 218453000*time.Nanosecond {
+	if period > pwm.MaxPeriod {
 		originalPeriod := period
-		period = 218453000 * time.Nanosecond
+		period = pwm.MaxPeriod
 		log.Warning("period out of bounds: changed from %d to %d", originalPeriod, period)
 	}
 

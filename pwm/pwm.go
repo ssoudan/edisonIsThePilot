@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 14:10:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 20:52:11
+* @Last Modified time: 2015-09-21 21:09:58
  */
 
 package pwm
@@ -28,6 +28,13 @@ import (
 	"io/ioutil"
 	"os"
 	"time"
+)
+
+const (
+	maxPeriodNanoSec = 218453000
+	MaxPeriod        = maxPeriodNanoSec * time.Nanosecond
+	minPeriodNanoSec = 104
+	MinPeriod        = minPeriodNanoSec * time.Nanosecond
 )
 
 type Pwm struct {
@@ -65,7 +72,7 @@ func (p Pwm) Unexport() error {
 // SetPeriodAndDutyCycle configures the pwm for a given period and duty cycle ratio.
 // Note this might go through a transient state if the pwm is Enabled
 func (p *Pwm) SetPeriodAndDutyCycle(period time.Duration, duty_cycle float32) error {
-	if period < 104*time.Nanosecond || period > 218453000*time.Nanosecond {
+	if period < MinPeriod || period > MaxPeriod {
 		return fmt.Errorf("must be in 104:218453000 ns range")
 	}
 
@@ -95,7 +102,7 @@ func (p Pwm) setDutyCycleNanoSec(duty_cycle int64) error {
 
 func (p Pwm) setPeriodNanoSecond(period int64) error {
 
-	if period > 218453000 || period < 104 {
+	if period > maxPeriodNanoSec || period < minPeriodNanoSec {
 		return fmt.Errorf("must be in 104:218453000 range")
 	}
 
