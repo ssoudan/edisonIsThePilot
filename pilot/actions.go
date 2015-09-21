@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 21:45:21
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 22:17:07
+* @Last Modified time: 2015-09-21 17:26:20
  */
 
 package pilot
@@ -53,4 +53,9 @@ func (p *Pilot) enable() {
 func (p *Pilot) disable() {
 	p.enabled = false
 	p.alarm = UNRAISED
+
+	/////////////////////////
+	// Tell the world
+	/////////////////////////
+	p.tellTheWorld()
 }

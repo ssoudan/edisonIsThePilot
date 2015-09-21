@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 16:25:44
+* @Last Modified time: 2015-09-21 17:29:45
  */
 
 package pilot
@@ -121,11 +121,8 @@ func (p *Pilot) updateFixStatus(fix FixStatus) {
 
 func (p Pilot) tellTheWorld() {
 	// Keep the alarm first - so at least we get notified something is wrong
-	// And we run this in a goroutine so that this can not block the execution of the event loop
-	go func() {
-		p.alarmChan <- alarm.NewMessage(bool(p.alarm))
-		p.dashboardChan <- dashboard.NewMessage(p.leds)
-	}()
+	p.alarmChan <- alarm.NewMessage(bool(p.alarm))
+	p.dashboardChan <- dashboard.NewMessage(p.leds)
 }
 
 func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {

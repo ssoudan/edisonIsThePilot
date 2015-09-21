@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 15:42:21
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 16:10:26
+* @Last Modified time: 2015-09-21 17:24:28
  */
 
 package alarm
@@ -107,7 +107,9 @@ func (d Alarm) Start() {
 			case m := <-d.inputChan:
 				switch m := m.(type) {
 				case message:
+					log.Info("Got an alarm message %v", m)
 					d.processMessage(m)
+					log.Info("Processed an alarm message %v", m)
 				}
 
 			}

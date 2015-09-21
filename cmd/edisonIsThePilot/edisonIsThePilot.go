@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 16:05:53
+* @Last Modified time: 2015-09-21 17:29:01
  */
 
 package main
@@ -227,6 +227,7 @@ func main() {
 
 	gps.Start()
 	dashboard.Start()
+	alarm.Start()
 	thePilot.Start()
 
 	// For tests
@@ -245,6 +246,7 @@ func main() {
 	waitForInterrupt()
 
 	dashboard.Shutdown()
+	alarm.Shutdown()
 }
 
 func waitForInterrupt() {
