@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 22:37:30
+* @Last Modified time: 2015-09-21 15:09:57
  */
 
 package pilot
@@ -39,10 +39,16 @@ type Pilot struct {
 	headingSet bool
 
 	leds map[string]bool
+	pid  Controller
 
 	// channels with the other components
 	dashboardChan chan interface{}
 	inputChan     chan interface{}
+}
+
+type Controller interface {
+	Set(sp float64)
+	Update(value float64) float64
 }
 
 type Leds map[Led]bool
@@ -69,10 +75,12 @@ func computeHeadingError(heading float64, gpsHeading float64) float64 {
 	return headingError
 }
 
-func New(bound float64) *Pilot {
+func New(controller Controller, bound float64) *Pilot {
+
 	return &Pilot{
 		leds:  make(map[string]bool),
-		bound: bound}
+		bound: bound,
+		pid:   controller}
 }
 
 func (p *Pilot) SetDashboardChan(c chan interface{}) {
@@ -111,6 +119,7 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 	if p.enabled && !p.headingSet {
 		log.Info("Heading to %v", gpsHeading.Heading)
 		p.heading = gpsHeading.Heading
+		p.pid.Set(0) // Reference is always 0 for us
 		p.headingSet = true
 	}
 
@@ -127,33 +136,39 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 	////////////////////////
 	if p.enabled {
 		log.Notice("Heading error is %v", headingError)
-	}
 
-	// Update alarm state from the previously computed alarms
-	p.alarm = Alarm(p.enabled) && headingAlarm // || blah
+		headingControl := p.pid.Update(headingError)
 
-	// Update alarm state from the previously computed alarms
-	steeringEnabled := p.computeSteeringState()
+		// TODO(ssoudan) do something with the headingControl like pass it to the motor when
 
-	if bool(headingAlarm) && p.enabled {
-		p.leds[dashboard.HeadingErrorOutOfBounds] = true
-	} else {
-		p.leds[dashboard.HeadingErrorOutOfBounds] = false
-	}
+		log.Notice("Heading control is %v", headingControl)
 
-	/////////////////////////
-	// Tell the world
-	/////////////////////////
-	if steeringEnabled {
-		log.Notice("Steering Enabled")
+		// Update alarm state from the previously computed alarms
+		p.alarm = Alarm(p.enabled) && headingAlarm // || blah
 
-		// TODO(ssoudan) do something with the heading error
+		// Update alarm state from the previously computed alarms
+		if bool(headingAlarm) && p.enabled {
+			p.leds[dashboard.HeadingErrorOutOfBounds] = true
+		} else {
+			p.leds[dashboard.HeadingErrorOutOfBounds] = false
+		}
 
-		// TODO(ssoudan) call the PID
+		steeringEnabled := p.computeSteeringState()
 
-		// TODO(ssoudan) check the PID output
-	} else {
-		log.Notice("Steering Disabled")
+		/////////////////////////
+		// Tell the world
+		/////////////////////////
+		if steeringEnabled {
+			log.Notice("Steering Enabled")
+
+			// TODO(ssoudan) do something with the heading error
+
+			// TODO(ssoudan) call the PID
+
+			// TODO(ssoudan) check the PID output
+		} else {
+			log.Notice("Steering Disabled")
+		}
 	}
 
 	// p.tellTheWorld()

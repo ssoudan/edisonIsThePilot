@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 17:13:41
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 13:32:51
+* @Last Modified time: 2015-09-21 14:22:42
  */
 
 package gps
@@ -94,7 +94,9 @@ func (g GPS) doReceiveGPSMessages() {
 
 		m, err := nmea.Parse(strings.TrimSuffix(str, "\r\n"))
 		if err != nil {
-			g.errorChan <- err
+			if !strings.HasSuffix(err.Error(), "not implemented") {
+				g.errorChan <- err
+			}
 			// Here we don't return as it is a non-fatal error and the next line
 			// will be better
 			continue

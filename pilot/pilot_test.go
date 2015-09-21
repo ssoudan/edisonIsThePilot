@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 22:17:28
+* @Last Modified time: 2015-09-21 15:12:38
  */
 
 package pilot
@@ -29,6 +29,22 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+type testConstroller struct {
+	sp        float64
+	lastValue float64
+}
+
+func (c *testConstroller) Set(sp float64) {
+	log.Info("Set has been called with %v", sp)
+	c.sp = sp
+}
+
+func (c *testConstroller) Update(value float64) float64 {
+	log.Info("Update has been called with %v", value)
+	c.lastValue = value
+	return 2.
+}
 
 func TestThatHeadingIsSetWithFirstGPSHeadingAfterItHasBeenEnabled(t *testing.T) {
 
@@ -45,7 +61,8 @@ func TestThatHeadingIsSetWithFirstGPSHeadingAfterItHasBeenEnabled(t *testing.T) 
 		bound:         45,
 		leds:          make(map[string]bool),
 		dashboardChan: c,
-		inputChan:     make(chan interface{})}
+		inputChan:     make(chan interface{}),
+		pid:           &testConstroller{}}
 
 	// pilot.Start()
 	pilot.enable()
@@ -67,6 +84,73 @@ func TestThatHeadingIsSetWithFirstGPSHeadingAfterItHasBeenEnabled(t *testing.T) 
 
 }
 
+func TestThatPIDControllerIsUpdatedWhenThePilotIsEnabled(t *testing.T) {
+
+	c := make(chan interface{})
+
+	go func() {
+		for true {
+			<-c
+		}
+	}()
+
+	INIT_SP := -2.
+	INIT_VALUE := -1.
+
+	controller := testConstroller{sp: INIT_SP, lastValue: INIT_VALUE}
+
+	pilot := Pilot{
+		alarm:         UNRAISED,
+		bound:         45,
+		leds:          make(map[string]bool),
+		dashboardChan: c,
+		inputChan:     make(chan interface{}),
+		pid:           &controller}
+
+	assert.EqualValues(t, INIT_SP, controller.sp, "sp has not yet been modified")
+	assert.EqualValues(t, INIT_VALUE, controller.lastValue, "error (aka PID input value) has not yet been updated")
+
+	pilot.Start()
+
+	assert.EqualValues(t, INIT_SP, controller.sp, "sp has not yet been modified by Start()")
+	assert.EqualValues(t, INIT_VALUE, controller.lastValue, "error (aka PID input value) has not yet been updated by Start()")
+
+	pilot.enable() // We call the internal synchronous version here
+
+	assert.EqualValues(t, INIT_SP, controller.sp, "sp has not yet been modified by enable()")
+	assert.EqualValues(t, INIT_VALUE, controller.lastValue, "error (aka PID input value) has not yet been updated by enable()")
+
+	assert.EqualValues(t, false, pilot.headingSet, "heading need to be set during first updateFeedback")
+
+	gpsHeadingStep1 := 180.
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep1})
+
+	assert.EqualValues(t, true, pilot.headingSet, "heading has been set to first gpsHeading")
+	assert.EqualValues(t, gpsHeadingStep1, pilot.heading, "heading has been set to first gpsHeading")
+
+	assert.EqualValues(t, 0., controller.sp, "sp has been set to 0 by the first updateFeedback() call after enable()")
+	assert.EqualValues(t, 0., controller.lastValue, "error (aka PID input value) is zero at this point")
+
+	gpsHeading := 170.
+
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading})
+
+	assert.EqualValues(t, true, pilot.headingSet, "heading has been set to first gpsHeading")
+	assert.EqualValues(t, gpsHeadingStep1, pilot.heading, "heading has been set to first gpsHeading")
+
+	assert.EqualValues(t, 0., controller.sp, "sp has been set to 0 by the first updateFeedback() call after enable()")
+	assert.EqualValues(t, gpsHeading-gpsHeadingStep1, controller.lastValue, "error (aka PID input value) is now the difference between the two headings")
+
+	pilot.disable()
+
+	gpsHeadingStep3 := 180.
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep3})
+
+	assert.EqualValues(t, 0., controller.sp, "sp has been set to 0 by the first updateFeedback() call after enable()")
+	assert.EqualValues(t, gpsHeading-gpsHeadingStep1, controller.lastValue, "error has not changed - since Update() has not been called cause the pilot is disabled")
+
+}
+
 func TestThatOutOfBoundsGPSInputRaisesAnAlarm(t *testing.T) {
 
 	c := make(chan interface{})
@@ -82,7 +166,8 @@ func TestThatOutOfBoundsGPSInputRaisesAnAlarm(t *testing.T) {
 		bound:         45,
 		leds:          make(map[string]bool),
 		dashboardChan: c,
-		inputChan:     make(chan interface{})}
+		inputChan:     make(chan interface{}),
+		pid:           &testConstroller{}}
 
 	// pilot.Start()
 	pilot.enable()

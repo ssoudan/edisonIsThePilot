@@ -18,12 +18,14 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 12:32:00
+* @Last Modified time: 2015-09-21 15:08:56
  */
 
 package main
 
 import (
+	"github.com/felixge/pidctrl"
+
 	"os"
 	"os/signal"
 	"syscall"
@@ -47,6 +49,14 @@ var messageToPin = map[string]byte{
 	dashboard.HeadingErrorOutOfBounds: 82, // J19 - pin 13
 	dashboard.CorrectionAtLimit:       83, // J19 - pin 14
 }
+
+const (
+	maxPIDOutputLimits = 15
+	minPIDOutputLimits = -15
+	p                  = 1
+	i                  = 0.1
+	d                  = 0.1
+)
 
 func main() {
 	// var err error
@@ -178,9 +188,15 @@ func main() {
 	}
 
 	////////////////////////////////////////
+	// PID stuffs
+	////////////////////////////////////////
+	pidController := pidctrl.NewPIDController(p, i, d)
+	pidController.SetOutputLimits(minPIDOutputLimits, maxPIDOutputLimits)
+
+	////////////////////////////////////////
 	// pilot stuffs
 	////////////////////////////////////////
-	thePilot := pilot.New(15.)
+	thePilot := pilot.New(pidController, 15.)
 	pilotChan := make(chan interface{})
 	thePilot.SetInputChan(pilotChan)
 	thePilot.SetDashboardChan(dashboardChan)
