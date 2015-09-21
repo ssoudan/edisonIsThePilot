@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 17:29:01
+* @Last Modified time: 2015-09-21 19:19:14
  */
 
 package main
@@ -37,8 +37,10 @@ import (
 	"github.com/ssoudan/edisonIsThePilot/gpio"
 	"github.com/ssoudan/edisonIsThePilot/gps"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
+	"github.com/ssoudan/edisonIsThePilot/motor"
 	"github.com/ssoudan/edisonIsThePilot/pilot"
 	"github.com/ssoudan/edisonIsThePilot/pwm"
+	"github.com/ssoudan/edisonIsThePilot/steering"
 )
 
 var log = logger.Log("edisonIsThePilot")
@@ -52,8 +54,12 @@ var messageToPin = map[string]byte{
 }
 
 const (
-	alarmGpioPin = 183
-	alarmGpioPWM = 3
+	alarmGpioPin  = 183
+	alarmGpioPWM  = 3
+	motorDirPin   = 165 // J18 - pin 2
+	motorSleepPin = 12  // J18 - pin 7
+	motorStepPin  = 182 // J17 - pin 1
+	motorStepPwm  = 2
 )
 
 const (
@@ -204,6 +210,15 @@ func main() {
 	alarm.SetInputChan(alarmChan)
 
 	////////////////////////////////////////
+	// an astonishing steering
+	////////////////////////////////////////
+	motor := motor.New(motorStepPin, motorStepPwm, motorDirPin, motorSleepPin)
+
+	steering := steering.New(motor)
+	steeringChan := make(chan interface{})
+	steering.SetInputChan(steeringChan)
+
+	////////////////////////////////////////
 	// PID stuffs
 	////////////////////////////////////////
 	pidController := pidctrl.NewPIDController(p, i, d)
@@ -217,6 +232,7 @@ func main() {
 	thePilot.SetInputChan(pilotChan)
 	thePilot.SetDashboardChan(dashboardChan)
 	thePilot.SetAlarmChan(alarmChan)
+	thePilot.SetSteeringChan(steeringChan)
 
 	////////////////////////////////////////
 	// gps stuffs
@@ -229,6 +245,7 @@ func main() {
 	dashboard.Start()
 	alarm.Start()
 	thePilot.Start()
+	steering.Start()
 
 	// For tests
 	go func() {
@@ -247,6 +264,7 @@ func main() {
 
 	dashboard.Shutdown()
 	alarm.Shutdown()
+	steering.Shutdown()
 }
 
 func waitForInterrupt() {
@@ -257,3 +275,5 @@ func waitForInterrupt() {
 		log.Info("Interrupted - exiting")
 	}
 }
+
+// TODO(ssoudan) set alarm if exited under an error condition

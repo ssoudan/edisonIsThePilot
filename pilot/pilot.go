@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 17:29:45
+* @Last Modified time: 2015-09-21 19:30:50
  */
 
 package pilot
@@ -27,6 +27,7 @@ import (
 	"github.com/ssoudan/edisonIsThePilot/alarm"
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
+	"github.com/ssoudan/edisonIsThePilot/steering"
 )
 
 var log = logger.Log("pilot")
@@ -46,6 +47,7 @@ type Pilot struct {
 	dashboardChan chan interface{}
 	inputChan     chan interface{}
 	alarmChan     chan interface{}
+	steeringChan  chan interface{}
 }
 
 type Controller interface {
@@ -95,6 +97,10 @@ func (p *Pilot) SetInputChan(c chan interface{}) {
 
 func (p *Pilot) SetAlarmChan(c chan interface{}) {
 	p.alarmChan = c
+}
+
+func (p *Pilot) SetSteeringChan(c chan interface{}) {
+	p.steeringChan = c
 }
 
 func (p *Pilot) updateFixStatus(fix FixStatus) {
@@ -150,31 +156,26 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 		log.Notice("Heading error is %v", headingError)
 
 		headingControl := p.pid.Update(headingError)
-
-		// TODO(ssoudan) do something with the headingControl like pass it to the motor when
-
 		log.Notice("Heading control is %v", headingControl)
-	}
 
-	////////////////////////
-	// <This section is updated even when the pilot is not enabled>
-	////////////////////////
-	// Update alarm state from the previously computed alarms
-	p.alarm = Alarm(p.enabled) && headingAlarm // || blah
+		// TODO(ssoudan) check if the control is not too large to raise the alarm or dashboard notification
 
-	// Update alarm state from the previously computed alarms
-	if bool(headingAlarm) && p.enabled {
-		p.leds[dashboard.HeadingErrorOutOfBounds] = true
-	} else {
-		p.leds[dashboard.HeadingErrorOutOfBounds] = false
-	}
+		////////////////////////
+		// <This section is updated even when the pilot is Enabled>
+		////////////////////////
+		// Update alarm state from the previously computed alarms
+		p.alarm = headingAlarm // || blah
 
-	steeringEnabled := p.computeSteeringState()
-	////////////////////////
-	// </This section is updated even when the pilot is not enabled>
-	////////////////////////
+		// Update alarm state from the previously computed alarms
+		if bool(headingAlarm) {
+			p.leds[dashboard.HeadingErrorOutOfBounds] = true
+		}
 
-	if p.enabled {
+		steeringEnabled := p.computeSteeringState()
+		////////////////////////
+		// </This section is updated even when the pilot is Enabled>
+		////////////////////////
+
 		/////////////////////////
 		// Tell the world
 		/////////////////////////
@@ -186,9 +187,25 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 			// TODO(ssoudan) call the PID
 
 			// TODO(ssoudan) check the PID output
+
+			p.steeringChan <- steering.NewMessage(headingControl)
+
 		} else {
 			log.Notice("Steering Disabled")
 		}
+	} else {
+		////////////////////////
+		// <This section is updated even when the pilot is not enabled>
+		////////////////////////
+		// Alarms are UNRAISED
+		p.alarm = UNRAISED
+
+		// Update alarm state from the previously computed alarms
+		p.leds[dashboard.HeadingErrorOutOfBounds] = false
+
+		////////////////////////
+		// </This section is updated even when the pilot is not enabled>
+		////////////////////////
 	}
 
 	/////////////////////////

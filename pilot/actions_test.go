@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 21:48:32
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 16:19:18
+* @Last Modified time: 2015-09-21 19:32:47
  */
 
 package pilot
@@ -45,6 +45,7 @@ func TestEnableDisable(t *testing.T) {
 		leds:          make(map[string]bool),
 		dashboardChan: c,
 		alarmChan:     c,
+		steeringChan:  c,
 		inputChan:     make(chan interface{}),
 		pid:           &testConstroller{}}
 

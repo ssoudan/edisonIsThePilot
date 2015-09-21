@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 16:24:16
+* @Last Modified time: 2015-09-21 19:32:34
  */
 
 package pilot
@@ -58,6 +58,7 @@ func TestThatTellTheWorldSendTheAlarmFirst(t *testing.T) {
 
 	pilot.SetAlarmChan(a)
 	pilot.SetDashboardChan(d)
+	pilot.SetSteeringChan(d)
 
 	go func() {
 		pilot.tellTheWorld()
@@ -98,6 +99,7 @@ func TestThatTellTheWorldPropagatesTheAlarmState(t *testing.T) {
 
 	pilot.SetAlarmChan(a)
 	pilot.SetDashboardChan(d)
+	pilot.SetSteeringChan(d)
 
 	go func() {
 		pilot.tellTheWorld()
@@ -137,6 +139,7 @@ func TestThatHeadingIsSetWithFirstGPSHeadingAfterItHasBeenEnabled(t *testing.T) 
 		leds:          make(map[string]bool),
 		dashboardChan: c,
 		alarmChan:     c,
+		steeringChan:  c,
 		inputChan:     make(chan interface{}),
 		pid:           &testConstroller{}}
 
@@ -181,6 +184,7 @@ func TestThatPIDControllerIsUpdatedWhenThePilotIsEnabled(t *testing.T) {
 		leds:          make(map[string]bool),
 		dashboardChan: c,
 		alarmChan:     c,
+		steeringChan:  c,
 		inputChan:     make(chan interface{}),
 		pid:           &controller}
 
@@ -244,6 +248,7 @@ func TestThatOutOfBoundsGPSInputRaisesAnAlarm(t *testing.T) {
 		leds:          make(map[string]bool),
 		dashboardChan: c,
 		alarmChan:     c,
+		steeringChan:  c,
 		inputChan:     make(chan interface{}),
 		pid:           &testConstroller{}}
 
