@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 17:13:41
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 23:56:07
+* @Last Modified time: 2015-09-21 13:32:51
  */
 
 package gps
@@ -76,8 +76,15 @@ func (g GPS) doReceiveGPSMessages() {
 
 	bufferedReader := bufio.NewReader(s)
 
+	defer func() {
+		if r := recover(); r != nil {
+			log.Warning("Recovered in f", r)
+		}
+	}()
+
 	for true {
 		str, err := bufferedReader.ReadString('\n')
+		// log.Debug("[%s]", str)
 		if err != nil {
 			log.Error("Failed to read from serial port: %v", err)
 			g.errorChan <- err

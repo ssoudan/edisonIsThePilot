@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 23:51:58
+* @Last Modified time: 2015-09-21 12:32:00
  */
 
 package main
@@ -41,12 +41,11 @@ import (
 var log = logger.Log("edisonIsThePilot")
 
 var messageToPin = map[string]byte{
-	dashboard.NoGPSFix: 168,
-	// TODO(ssoudan) fix the mapping
-	// dashboard.InvalidGPSData:          1,
-	// dashboard.SpeedTooLow:             2,
-	// dashboard.HeadingErrorOutOfBounds: 3,
-	// dashboard.CorrectionAtLimit:       4,
+	dashboard.NoGPSFix:                40, // J19 - pin 10
+	dashboard.InvalidGPSData:          43, // J19 - pin 11
+	dashboard.SpeedTooLow:             48, // J19 - pin 6
+	dashboard.HeadingErrorOutOfBounds: 82, // J19 - pin 13
+	dashboard.CorrectionAtLimit:       83, // J19 - pin 14
 }
 
 func main() {
@@ -150,6 +149,28 @@ func main() {
 			log.Fatal(err)
 		}
 
+		// Test Disabled and Enabled state for each LEDs
+		err = g.Disable()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Info("%s LED is ON", message)
+		time.Sleep(1 * time.Second)
+
+		err = g.Enable()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Info("%s LED is OFF", message)
+		time.Sleep(1 * time.Second)
+
+		err = g.Disable()
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		return g
 	}
 	for k, v := range messageToPin {
@@ -199,6 +220,5 @@ func waitForInterrupt() {
 	select {
 	case <-sigChan:
 		log.Info("Interrupted - exiting")
-		os.Exit(255)
 	}
 }
