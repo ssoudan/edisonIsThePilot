@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 21:26:33
+* @Last Modified time: 2015-09-21 22:16:58
  */
 
 package main
@@ -34,12 +34,12 @@ import (
 	// "github.com/ssoudan/edisonIsThePilot/compass/hmc"
 	"github.com/ssoudan/edisonIsThePilot/alarm"
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
-	"github.com/ssoudan/edisonIsThePilot/gpio"
+	"github.com/ssoudan/edisonIsThePilot/drivers/gpio"
+	"github.com/ssoudan/edisonIsThePilot/drivers/motor"
+	"github.com/ssoudan/edisonIsThePilot/drivers/pwm"
 	"github.com/ssoudan/edisonIsThePilot/gps"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
-	"github.com/ssoudan/edisonIsThePilot/motor"
 	"github.com/ssoudan/edisonIsThePilot/pilot"
-	"github.com/ssoudan/edisonIsThePilot/pwm"
 	"github.com/ssoudan/edisonIsThePilot/steering"
 )
 

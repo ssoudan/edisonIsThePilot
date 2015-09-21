@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 18:58:22
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 21:10:36
+* @Last Modified time: 2015-09-21 22:17:14
  */
 
 package motor
@@ -26,9 +26,9 @@ package motor
 import (
 	"time"
 
-	"github.com/ssoudan/edisonIsThePilot/gpio"
+	"github.com/ssoudan/edisonIsThePilot/drivers/gpio"
+	"github.com/ssoudan/edisonIsThePilot/drivers/pwm"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
-	"github.com/ssoudan/edisonIsThePilot/pwm"
 )
 
 var log = logger.Log("motor")
