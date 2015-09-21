@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 15:12:38
+* @Last Modified time: 2015-09-21 16:24:16
  */
 
 package pilot
@@ -46,6 +46,81 @@ func (c *testConstroller) Update(value float64) float64 {
 	return 2.
 }
 
+func TestThatTellTheWorldSendTheAlarmFirst(t *testing.T) {
+	d := make(chan interface{})
+
+	// In this test nobody reads on the dashboard channel, first message will block the sender
+	// We test that alarms are still being delivered
+	a := make(chan interface{})
+
+	pilot := Pilot{
+		alarm: UNRAISED}
+
+	pilot.SetAlarmChan(a)
+	pilot.SetDashboardChan(d)
+
+	go func() {
+		pilot.tellTheWorld()
+	}()
+
+	m := <-a
+
+	// Yup not very elegant but don't want to leak the internals of the alarm.message
+	assert.EqualValues(t, "{false}", fmt.Sprintf("%v", m), "tell the world should propagates the alarm")
+
+	pilot.alarm = RAISED
+
+	go func() {
+		pilot.tellTheWorld()
+	}()
+
+	m2 := <-a
+
+	// Yup not very elegant but don't want to leak the internals of the alarm.message
+	assert.EqualValues(t, "{true}", fmt.Sprintf("%v", m2), "tell the world should propagates the alarm")
+
+}
+
+func TestThatTellTheWorldPropagatesTheAlarmState(t *testing.T) {
+	d := make(chan interface{})
+
+	// This is required as we are likely to send messages on the dashboard chan too
+	go func() {
+		for true {
+			<-d
+		}
+	}()
+
+	a := make(chan interface{})
+
+	pilot := Pilot{
+		alarm: UNRAISED}
+
+	pilot.SetAlarmChan(a)
+	pilot.SetDashboardChan(d)
+
+	go func() {
+		pilot.tellTheWorld()
+	}()
+
+	m := <-a
+
+	// Yup not very elegant but don't want to leak the internals of the alarm.message
+	assert.EqualValues(t, "{false}", fmt.Sprintf("%v", m), "tell the world should propagates the alarm")
+
+	pilot.alarm = RAISED
+
+	go func() {
+		pilot.tellTheWorld()
+	}()
+
+	m2 := <-a
+
+	// Yup not very elegant but don't want to leak the internals of the alarm.message
+	assert.EqualValues(t, "{true}", fmt.Sprintf("%v", m2), "tell the world should propagates the alarm")
+
+}
+
 func TestThatHeadingIsSetWithFirstGPSHeadingAfterItHasBeenEnabled(t *testing.T) {
 
 	c := make(chan interface{})
@@ -61,6 +136,7 @@ func TestThatHeadingIsSetWithFirstGPSHeadingAfterItHasBeenEnabled(t *testing.T) 
 		bound:         45,
 		leds:          make(map[string]bool),
 		dashboardChan: c,
+		alarmChan:     c,
 		inputChan:     make(chan interface{}),
 		pid:           &testConstroller{}}
 
@@ -104,6 +180,7 @@ func TestThatPIDControllerIsUpdatedWhenThePilotIsEnabled(t *testing.T) {
 		bound:         45,
 		leds:          make(map[string]bool),
 		dashboardChan: c,
+		alarmChan:     c,
 		inputChan:     make(chan interface{}),
 		pid:           &controller}
 
@@ -166,6 +243,7 @@ func TestThatOutOfBoundsGPSInputRaisesAnAlarm(t *testing.T) {
 		bound:         45,
 		leds:          make(map[string]bool),
 		dashboardChan: c,
+		alarmChan:     c,
 		inputChan:     make(chan interface{}),
 		pid:           &testConstroller{}}
 

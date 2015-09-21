@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 15:08:56
+* @Last Modified time: 2015-09-21 16:05:53
  */
 
 package main
@@ -32,12 +32,13 @@ import (
 	"time"
 
 	// "github.com/ssoudan/edisonIsThePilot/compass/hmc"
+	"github.com/ssoudan/edisonIsThePilot/alarm"
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
 	"github.com/ssoudan/edisonIsThePilot/gpio"
 	"github.com/ssoudan/edisonIsThePilot/gps"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 	"github.com/ssoudan/edisonIsThePilot/pilot"
-	// "github.com/ssoudan/edisonIsThePilot/pwm"
+	"github.com/ssoudan/edisonIsThePilot/pwm"
 )
 
 var log = logger.Log("edisonIsThePilot")
@@ -51,6 +52,11 @@ var messageToPin = map[string]byte{
 }
 
 const (
+	alarmGpioPin = 183
+	alarmGpioPWM = 3
+)
+
+const (
 	maxPIDOutputLimits = 15
 	minPIDOutputLimits = -15
 	p                  = 1
@@ -59,37 +65,6 @@ const (
 )
 
 func main() {
-	// var err error
-
-	////////////////////////////////////////
-	// PWM stuffs
-	////////////////////////////////////////
-	// err = gpio.EnablePWM(182)
-	// if err != nil {
-	// 	log.Fatal("Failed to set pin 182 to pwm2: %v", err)
-	// }
-	// var pwm = pwm.New(2)
-	// if !pwm.IsExported() {
-	// 	err = pwm.Export()
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// }
-
-	// pwm.Disable()
-
-	// if err = pwm.SetPeriodAndDutyCycle(10*time.Millisecond, 0.5); err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// if err = pwm.Enable(); err != nil {
-	// 	log.Fatal(err)
-	// }
-	// log.Info("pwm configured")
-	// time.Sleep(100 * time.Second)
-
-	// pwm.Disable()
-	// pwm.Unexport()
 
 	////////////////////////////////////////
 	// HMC5883 stuffs
@@ -165,7 +140,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		log.Info("%s LED is ON", message)
+		log.Info("[AUTOTEST] %s LED is ON", message)
 		time.Sleep(1 * time.Second)
 
 		err = g.Enable()
@@ -173,7 +148,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		log.Info("%s LED is OFF", message)
+		log.Info("[AUTOTEST] %s LED is OFF", message)
 		time.Sleep(1 * time.Second)
 
 		err = g.Disable()
@@ -188,6 +163,47 @@ func main() {
 	}
 
 	////////////////////////////////////////
+	// a nice alarm
+	////////////////////////////////////////
+	alarmPwm := func(pin byte, pwmId byte) pwm.Pwm {
+
+		// kill the process (via log.Fatal) in case we can't create the PWM
+		err := gpio.EnablePWM(pin)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var pwm = pwm.New(alarmGpioPWM)
+		if !pwm.IsExported() {
+			err = pwm.Export()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		pwm.Disable()
+
+		if err = pwm.SetPeriodAndDutyCycle(200*time.Millisecond, 0.5); err != nil {
+			log.Fatal(err)
+		}
+
+		if err = pwm.Enable(); err != nil {
+			log.Fatal(err)
+		}
+		log.Info("[AUTOTEST] alarm is ON")
+
+		time.Sleep(2 * time.Second)
+		pwm.Disable()
+		log.Info("[AUTOTEST] alarm is OFF")
+
+		return pwm
+	}(alarmGpioPin, alarmGpioPWM)
+
+	alarm := alarm.New(alarmPwm)
+	alarmChan := make(chan interface{})
+	alarm.SetInputChan(alarmChan)
+
+	////////////////////////////////////////
 	// PID stuffs
 	////////////////////////////////////////
 	pidController := pidctrl.NewPIDController(p, i, d)
@@ -200,6 +216,7 @@ func main() {
 	pilotChan := make(chan interface{})
 	thePilot.SetInputChan(pilotChan)
 	thePilot.SetDashboardChan(dashboardChan)
+	thePilot.SetAlarmChan(alarmChan)
 
 	////////////////////////////////////////
 	// gps stuffs

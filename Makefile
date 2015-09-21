@@ -28,7 +28,7 @@ GOFMT=gofmt -w
 # Package lists
 TOPLEVEL_PKG := github.com/ssoudan/edisonIsThePilot
 INT_LIST :=  #<-- Interface directories
-IMPL_LIST := dashboard pilot gps infrastructure/logger pwm gpio compass/hmc #<-- Implementation directories
+IMPL_LIST := alarm dashboard pilot gps infrastructure/logger pwm gpio compass/hmc #<-- Implementation directories
 CMD_LIST := cmd/edisonIsThePilot #<-- Command directories
 
 # List building

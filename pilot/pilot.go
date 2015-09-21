@@ -18,12 +18,13 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 15:09:57
+* @Last Modified time: 2015-09-21 16:25:44
  */
 
 package pilot
 
 import (
+	"github.com/ssoudan/edisonIsThePilot/alarm"
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 )
@@ -44,6 +45,7 @@ type Pilot struct {
 	// channels with the other components
 	dashboardChan chan interface{}
 	inputChan     chan interface{}
+	alarmChan     chan interface{}
 }
 
 type Controller interface {
@@ -91,6 +93,10 @@ func (p *Pilot) SetInputChan(c chan interface{}) {
 	p.inputChan = c
 }
 
+func (p *Pilot) SetAlarmChan(c chan interface{}) {
+	p.alarmChan = c
+}
+
 func (p *Pilot) updateFixStatus(fix FixStatus) {
 	// compute the update for fix status
 	fixAlarm, fixLed := validateFixStatus(fix)
@@ -110,7 +116,16 @@ func (p *Pilot) updateFixStatus(fix FixStatus) {
 	/////////////////////////
 	// Tell the world
 	/////////////////////////
-	p.dashboardChan <- dashboard.NewMessage(p.leds)
+	p.tellTheWorld()
+}
+
+func (p Pilot) tellTheWorld() {
+	// Keep the alarm first - so at least we get notified something is wrong
+	// And we run this in a goroutine so that this can not block the execution of the event loop
+	go func() {
+		p.alarmChan <- alarm.NewMessage(bool(p.alarm))
+		p.dashboardChan <- dashboard.NewMessage(p.leds)
+	}()
 }
 
 func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
@@ -142,19 +157,27 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 		// TODO(ssoudan) do something with the headingControl like pass it to the motor when
 
 		log.Notice("Heading control is %v", headingControl)
+	}
 
-		// Update alarm state from the previously computed alarms
-		p.alarm = Alarm(p.enabled) && headingAlarm // || blah
+	////////////////////////
+	// <This section is updated even when the pilot is not enabled>
+	////////////////////////
+	// Update alarm state from the previously computed alarms
+	p.alarm = Alarm(p.enabled) && headingAlarm // || blah
 
-		// Update alarm state from the previously computed alarms
-		if bool(headingAlarm) && p.enabled {
-			p.leds[dashboard.HeadingErrorOutOfBounds] = true
-		} else {
-			p.leds[dashboard.HeadingErrorOutOfBounds] = false
-		}
+	// Update alarm state from the previously computed alarms
+	if bool(headingAlarm) && p.enabled {
+		p.leds[dashboard.HeadingErrorOutOfBounds] = true
+	} else {
+		p.leds[dashboard.HeadingErrorOutOfBounds] = false
+	}
 
-		steeringEnabled := p.computeSteeringState()
+	steeringEnabled := p.computeSteeringState()
+	////////////////////////
+	// </This section is updated even when the pilot is not enabled>
+	////////////////////////
 
+	if p.enabled {
 		/////////////////////////
 		// Tell the world
 		/////////////////////////
@@ -171,12 +194,14 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 		}
 	}
 
-	// p.tellTheWorld()
-	p.dashboardChan <- dashboard.NewMessage(p.leds)
+	/////////////////////////
+	// Tell the world
+	/////////////////////////
+	p.tellTheWorld()
 }
 
 // Start the event loop of the Pilot component
-func (p Pilot) Start() chan interface{} {
+func (p Pilot) Start() {
 	go func() {
 
 		for {
@@ -199,7 +224,6 @@ func (p Pilot) Start() chan interface{} {
 
 	}()
 
-	return p.inputChan
 }
 
 func (p Pilot) computeSteeringState() bool {
