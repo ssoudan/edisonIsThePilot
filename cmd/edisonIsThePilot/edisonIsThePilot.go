@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 19:19:14
+* @Last Modified time: 2015-09-21 20:47:38
  */
 
 package main
@@ -199,7 +199,9 @@ func main() {
 		log.Info("[AUTOTEST] alarm is ON")
 
 		time.Sleep(2 * time.Second)
-		pwm.Disable()
+		if err = pwm.Disable(); err != nil {
+			log.Fatal(err)
+		}
 		log.Info("[AUTOTEST] alarm is OFF")
 
 		return pwm

@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 14:10:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 17:33:29
+* @Last Modified time: 2015-09-21 20:50:41
  */
 
 package pwm
@@ -31,7 +31,8 @@ import (
 )
 
 type Pwm struct {
-	pin uint8
+	pin       uint8
+	dutyCycle int64
 }
 
 // New returns a new PWM for a given pin - See Edison Breakout documentation to figure out which one you want.
@@ -63,7 +64,7 @@ func (p Pwm) Unexport() error {
 
 // SetPeriodAndDutyCycle configures the pwm for a given period and duty cycle ratio.
 // Note this might go through a transient state if the pwm is Enabled
-func (p Pwm) SetPeriodAndDutyCycle(period time.Duration, duty_cycle float32) error {
+func (p *Pwm) SetPeriodAndDutyCycle(period time.Duration, duty_cycle float32) error {
 	if period < 104*time.Nanosecond || period > 218453000*time.Nanosecond {
 		return fmt.Errorf("must be in 104:218453000 ns range")
 	}
@@ -78,7 +79,10 @@ func (p Pwm) SetPeriodAndDutyCycle(period time.Duration, duty_cycle float32) err
 	if err := p.setPeriodNanoSecond(period.Nanoseconds()); err != nil {
 		return err
 	}
-	if err := p.setDutyCycleNanoSec((int64)(float32(period.Nanoseconds()) * duty_cycle)); err != nil {
+
+	p.dutyCycle = (int64)(float32(period.Nanoseconds()) * duty_cycle)
+
+	if err := p.setDutyCycleNanoSec(p.dutyCycle); err != nil {
 		return err
 	}
 
@@ -100,10 +104,19 @@ func (p Pwm) setPeriodNanoSecond(period int64) error {
 
 // Enable this pwm
 func (p Pwm) Enable() error {
+	if err := p.setDutyCycleNanoSec(p.dutyCycle); err != nil {
+		return err
+	}
+
 	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/enable", p.pin), "1")
 }
 
 // Disable this pwm
 func (p Pwm) Disable() error {
-	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/enable", p.pin), "0")
+	err := writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/enable", p.pin), "0")
+	if err != nil {
+		return err
+	}
+
+	return p.setDutyCycleNanoSec(0)
 }

@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 15:42:21
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 17:51:44
+* @Last Modified time: 2015-09-21 20:28:58
  */
 
 package alarm
@@ -60,16 +60,16 @@ func (d *Alarm) SetInputChan(c chan interface{}) {
 
 func (d *Alarm) processAlarmState() {
 
-	gpio := d.alarmHandler
+	alarm := d.alarmHandler
 	state := d.alarmState
 
 	if state {
-		err := gpio.Enable()
+		err := alarm.Enable()
 		if err != nil {
 			log.Error("Failed to change alarm state for [%s = %v]: %v", state, err)
 		}
 	} else {
-		err := gpio.Disable()
+		err := alarm.Disable()
 		if err != nil {
 			log.Error("Failed to change alarm state for [%s = %v]: %v", state, err)
 		}
