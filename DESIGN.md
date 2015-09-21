@@ -7,13 +7,13 @@
 
 <!-- MarkdownTOC -->
 
-- 1. Problem statement
-- 2. System Design
-- 3. Heading Control Autopilot
+- 1 -- Problem statement
+- 2 -- System Design
+- 3 -- Heading Control Autopilot
 
 <!-- /MarkdownTOC -->
 
-## 1. Problem statement
+## 1 -- Problem statement
 
 For now, we want **a system that can hold the heading by acting on the rudder**.
 
@@ -71,7 +71,7 @@ From [Arduino Forum](http://forum.arduino.cc/index.php?topic=232450.0)
 - [AIS on Pi](http://publiclab.org/notes/ajawitz/06-11-2015/raspberry-pi-as-marine-traffic-radar)
 - [AIS soft](http://hackaday.com/2013/05/06/tracking-ships-using-software-defined-radio-sdr/)
 
-## 2. System Design
+## 2 -- System Design
 
 In this section we describe the system that we will build in the long term.
 
@@ -123,7 +123,7 @@ Thus, for the inital iteration, we will focus on the heading control autopilot d
     angle        |------|
                  
 
-## 3. Heading Control Autopilot
+## 3 -- Heading Control Autopilot
 
 For the first iteration, the heading set point will be defined as the current heading when a button is pressed (heading hold mode).
 
@@ -196,8 +196,22 @@ We need:
 - a GPIO input pin for the hold heading button
 - a couple of GPIOU output pin to control status LEDs
 
-<!-- TODO(ssoudan) pin map -->
-<!-- TODO(ssoudan) custom lib for GPIO/PWM + references -->
+Currently, we use the following pins:
+
+    For the dashboard informations:  
+    NoGPSFix                 gpio40 --> J19 - pin 10
+    InvalidGPSData           gpio43 --> J19 - pin 11
+    SpeedTooLow              gpio48 --> J19 - pin 6
+    HeadingErrorOutOfBounds  gpio82 --> J19 - pin 13
+    CorrectionAtLimit        gpio83 --> J19 - pin 14  
+
+    For the alarm:
+
+    alarmGpio                gpio183 --> J18 - pin 8 -- which is also pwm3
+    motorDir                 gpio165 --> J18 - pin 2
+    motorSleep               gpio12  --> J18 - pin 7
+    motorStep                gpio182 --> J17 - pin 1 -- which is pwm2
+)
 
 Because once configured as output, GPIO and PWM are only 1.8V, we need to level shift it to 3.3V to drive motor driver.
 For this, we use the following circuit: 
@@ -213,6 +227,22 @@ For this, we use the following circuit:
     input        |
     0-1.8v ------+
 
+Pins driving LEDs uses a more standard NPN based-driver.
+
+    -------------+---- 5 V
+                 |
+                 /
+                 \ 10k
+                 /
+                 |
+                 _
+                 V LED
+                ---
+    pin          |
+      _www_____|/
+               |\   2N3904
+                 |
+    0 -----------+  gnd
 
 - [GPIO configuration](http://www.malinov.com/Home/sergey-s-blog/intelgalileo-programminggpiofromlinux)
 - [GPIO and sysfs](https://www.kernel.org/doc/Documentation/gpio/sysfs.txt)
@@ -225,7 +255,7 @@ Arduino has a couple of libraries for these chips: [jarzebski/Arduino-HMC5883L](
 We will need to write our own implementation of them in Go.
 As a support library, [gmcbay/i2c](https://bitbucket.org/gmcbay/i2c) will be use to wrap the i2c buses.
 
-<!-- TODO(ssoudan) which i2c bus do we use? -->
+We don't use that yet.
 
 #### 3.4.3 Interfacing with the GPS 
 We will use [adrianmo/go-nmea](https://github.com/adrianmo/go-nmea) library to decode the messages and use [tarm/serial](https://github.com/tarm/serial) to access the serial interface. We use `/dev/ttyMFD1` serial interface.
@@ -250,8 +280,12 @@ For now, only the [GPRMC](http://aprs.gids.nl/nmea/#rmc) sentence will be used:
 
 #### 3.4.4 PID controller
 
-[felixge/pidctrl](https://github.com/felixge/pidctrl)
-<!-- TODO(ssoudan) describe this -->
+The input of the PID is the error defined as the difference between the current heading as provided by the GPS and the reference heading we have saved right after the autopilot has been enabled.
+The error is centered on 0 and varies from -180 (excluded) to 180 (included).
+The output of the PID is fed to the steering module which interpret this as the 
+rotation to be done in one direction or the other. 
+
+We use the following golang implementation of a PID: [felixge/pidctrl](https://github.com/felixge/pidctrl).
 
 #### 3.4.5 Software Architecture
 
@@ -262,8 +296,8 @@ For now, only the [GPRMC](http://aprs.gids.nl/nmea/#rmc) sentence will be used:
 <!-- TODO(ssoudan) -->
 
 #### 3.4.6 Power source
-
-<!-- TODO(ssoudan) -->
+We use a 12v power source. This is the fed directly to the Vin of the Edison and the Big EasyDriver which control the stepper motor. 
+For the other components (GPS and level shifters), we have 2 regulators on the board to obtain 3.3V and 5v regulated.
 
 #### 3.4.7 Security
 

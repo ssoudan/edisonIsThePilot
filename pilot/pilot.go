@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 19:30:50
+* @Last Modified time: 2015-09-21 21:13:19
  */
 
 package pilot
@@ -158,8 +158,6 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 		headingControl := p.pid.Update(headingError)
 		log.Notice("Heading control is %v", headingControl)
 
-		// TODO(ssoudan) check if the control is not too large to raise the alarm or dashboard notification
-
 		////////////////////////
 		// <This section is updated even when the pilot is Enabled>
 		////////////////////////
@@ -181,10 +179,6 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 		/////////////////////////
 		if steeringEnabled {
 			log.Notice("Steering Enabled")
-
-			// TODO(ssoudan) do something with the heading error
-
-			// TODO(ssoudan) call the PID
 
 			// TODO(ssoudan) check the PID output
 

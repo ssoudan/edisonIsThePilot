@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 20:47:38
+* @Last Modified time: 2015-09-21 21:26:33
  */
 
 package main
@@ -54,7 +54,7 @@ var messageToPin = map[string]byte{
 }
 
 const (
-	alarmGpioPin  = 183
+	alarmGpioPin  = 183 // J18 - pin 8
 	alarmGpioPWM  = 3
 	motorDirPin   = 165 // J18 - pin 2
 	motorSleepPin = 12  // J18 - pin 7
