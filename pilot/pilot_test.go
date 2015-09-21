@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 19:32:34
+* @Last Modified time: 2015-09-21 23:12:03
  */
 
 package pilot
@@ -149,14 +149,14 @@ func TestThatHeadingIsSetWithFirstGPSHeadingAfterItHasBeenEnabled(t *testing.T) 
 	assert.EqualValues(t, false, pilot.headingSet, "heading need to be set during first updateFeedback")
 
 	gpsHeadingStep1 := 180.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep1, Validity: true, Speed: MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, true, pilot.headingSet, "heading has been set to first gpsHeading")
 	assert.EqualValues(t, gpsHeadingStep1, pilot.heading, "heading has been set to first gpsHeading")
 
 	gpsHeading := 170.
 
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, true, pilot.headingSet, "heading has been set to first gpsHeading")
 	assert.EqualValues(t, gpsHeadingStep1, pilot.heading, "heading has been set to first gpsHeading")
@@ -204,7 +204,7 @@ func TestThatPIDControllerIsUpdatedWhenThePilotIsEnabled(t *testing.T) {
 	assert.EqualValues(t, false, pilot.headingSet, "heading need to be set during first updateFeedback")
 
 	gpsHeadingStep1 := 180.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep1, Validity: true, Speed: MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, true, pilot.headingSet, "heading has been set to first gpsHeading")
 	assert.EqualValues(t, gpsHeadingStep1, pilot.heading, "heading has been set to first gpsHeading")
@@ -214,7 +214,7 @@ func TestThatPIDControllerIsUpdatedWhenThePilotIsEnabled(t *testing.T) {
 
 	gpsHeading := 170.
 
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, true, pilot.headingSet, "heading has been set to first gpsHeading")
 	assert.EqualValues(t, gpsHeadingStep1, pilot.heading, "heading has been set to first gpsHeading")
@@ -225,10 +225,56 @@ func TestThatPIDControllerIsUpdatedWhenThePilotIsEnabled(t *testing.T) {
 	pilot.disable()
 
 	gpsHeadingStep3 := 180.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep3})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep3, Validity: true, Speed: MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, 0., controller.sp, "sp has been set to 0 by the first updateFeedback() call after enable()")
 	assert.EqualValues(t, gpsHeading-gpsHeadingStep1, controller.lastValue, "error has not changed - since Update() has not been called cause the pilot is disabled")
+
+}
+
+func TestThatTimeoutRaiseTheAlarm(t *testing.T) {
+
+	c := make(chan interface{})
+
+	go func() {
+		for true {
+			<-c
+		}
+	}()
+
+	pilot := Pilot{
+		alarm:         UNRAISED,
+		bound:         45,
+		leds:          make(map[string]bool),
+		dashboardChan: c,
+		alarmChan:     c,
+		steeringChan:  c,
+		inputChan:     make(chan interface{}),
+		pid:           &testConstroller{}}
+
+	pilot.disable()
+
+	expected := UNRAISED
+	result := pilot.alarm
+	assert.EqualValues(t, expected, result)
+
+	pilot.updateAfterTimeout()
+
+	expected = UNRAISED
+	result = pilot.alarm
+	assert.EqualValues(t, expected, result)
+
+	pilot.enable()
+
+	expected = UNRAISED
+	result = pilot.alarm
+	assert.EqualValues(t, expected, result)
+
+	pilot.updateAfterTimeout()
+
+	expected = RAISED
+	result = pilot.alarm
+	assert.EqualValues(t, expected, result)
 
 }
 
@@ -256,10 +302,10 @@ func TestThatOutOfBoundsGPSInputRaisesAnAlarm(t *testing.T) {
 	pilot.enable()
 
 	gpsHeading := 180.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: MinimumSpeedInKnots * 1.1})
 
 	gpsHeading = 110.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: MinimumSpeedInKnots * 1.1})
 
 	expected := RAISED
 	result := pilot.alarm

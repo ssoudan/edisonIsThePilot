@@ -18,12 +18,14 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 21:13:19
+* @Last Modified time: 2015-09-21 23:13:11
  */
 
 package pilot
 
 import (
+	"time"
+
 	"github.com/ssoudan/edisonIsThePilot/alarm"
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
@@ -31,6 +33,11 @@ import (
 )
 
 var log = logger.Log("pilot")
+
+const (
+	NoInputMessageTimeoutInSeconds = 10
+	MinimumSpeedInKnots            = 3
+)
 
 type Pilot struct {
 	heading float64 // target heading (set point)
@@ -113,16 +120,8 @@ func (p *Pilot) updateFixStatus(fix FixStatus) {
 	p.alarm = p.alarm || fixAlarm
 
 	// TODO(ssoudan) wrap this stuff in something that can be tested
-	if fixLed {
-		p.leds[dashboard.NoGPSFix] = true
-	} else {
-		p.leds[dashboard.NoGPSFix] = false
-	}
+	p.leds[dashboard.NoGPSFix] = fixLed
 
-	/////////////////////////
-	// Tell the world
-	/////////////////////////
-	p.tellTheWorld()
 }
 
 func (p Pilot) tellTheWorld() {
@@ -134,20 +133,22 @@ func (p Pilot) tellTheWorld() {
 func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 
 	// Set the heading with the current GPS heading if it has not been set before
-	if p.enabled && !p.headingSet {
+	if p.enabled && !p.headingSet && gpsHeading.Validity {
 		log.Info("Heading to %v", gpsHeading.Heading)
 		p.heading = gpsHeading.Heading
 		p.pid.Set(0) // Reference is always 0 for us
 		p.headingSet = true
 	}
 
-	// TODO(ssoudan) do something with the validity
+	// check the validity of the message validity of the gps message
+	validityAlarm := checkValidityError(gpsHeading.Validity)
 
-	// TODO(ssoudan) do something with the speed
+	// check the speed
+	speedAlarm := checkSpeedError(gpsHeading.Speed)
 
 	headingError := computeHeadingError(p.heading, gpsHeading.Heading)
 
-	headingAlarm := p.checkHeadingError(headingError)
+	headingAlarm := !validityAlarm && !speedAlarm && p.checkHeadingError(headingError)
 
 	/////////////////////////
 	// Update pilot state from previous checks
@@ -155,28 +156,25 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 	if p.enabled {
 		log.Notice("Heading error is %v", headingError)
 
-		headingControl := p.pid.Update(headingError)
-		log.Notice("Heading control is %v", headingControl)
-
-		////////////////////////
-		// <This section is updated even when the pilot is Enabled>
-		////////////////////////
 		// Update alarm state from the previously computed alarms
-		p.alarm = headingAlarm // || blah
+		p.alarm = p.alarm || headingAlarm || validityAlarm || speedAlarm
 
 		// Update alarm state from the previously computed alarms
 		if bool(headingAlarm) {
 			p.leds[dashboard.HeadingErrorOutOfBounds] = true
 		}
+		if bool(validityAlarm) {
+			p.leds[dashboard.InvalidGPSData] = true
+		}
+		if bool(speedAlarm) {
+			p.leds[dashboard.SpeedTooLow] = true
+		}
+
+		headingControl := p.pid.Update(headingError)
+		log.Notice("Heading control is %v", headingControl)
 
 		steeringEnabled := p.computeSteeringState()
-		////////////////////////
-		// </This section is updated even when the pilot is Enabled>
-		////////////////////////
 
-		/////////////////////////
-		// Tell the world
-		/////////////////////////
 		if steeringEnabled {
 			log.Notice("Steering Enabled")
 
@@ -189,23 +187,26 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 		}
 	} else {
 		////////////////////////
-		// <This section is updated even when the pilot is not enabled>
+		// <This section is updated when the pilot is not enabled>
 		////////////////////////
 		// Alarms are UNRAISED
 		p.alarm = UNRAISED
 
 		// Update alarm state from the previously computed alarms
-		p.leds[dashboard.HeadingErrorOutOfBounds] = false
+		p.leds[dashboard.HeadingErrorOutOfBounds] = false // Doesn't make sense when disabled
+		p.leds[dashboard.InvalidGPSData] = bool(validityAlarm)
+		p.leds[dashboard.SpeedTooLow] = bool(speedAlarm)
 
 		////////////////////////
-		// </This section is updated even when the pilot is not enabled>
+		// </This section is updated when the pilot is not enabled>
 		////////////////////////
 	}
+}
 
-	/////////////////////////
-	// Tell the world
-	/////////////////////////
-	p.tellTheWorld()
+func (p *Pilot) updateAfterTimeout() {
+	if p.enabled {
+		p.alarm = RAISED
+	}
 }
 
 // Start the event loop of the Pilot component
@@ -227,7 +228,14 @@ func (p Pilot) Start() {
 				case error:
 					log.Error("Received an error: %v", m)
 				}
+			case <-time.After(NoInputMessageTimeoutInSeconds * time.Second):
+				p.updateAfterTimeout()
 			}
+
+			/////////////////////////
+			// Tell the world
+			/////////////////////////
+			p.tellTheWorld()
 		}
 
 	}()

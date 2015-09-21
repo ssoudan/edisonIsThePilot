@@ -16,41 +16,34 @@ under the License.
 
 /*
 * @Author: Sebastien Soudan
-* @Date:   2015-09-20 21:45:21
+* @Date:   2015-09-21 22:49:13
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 22:25:14
+* @Last Modified time: 2015-09-21 22:57:38
  */
 
 package pilot
 
-type GPSFeedBackAction struct {
-	Heading  float64
-	Validity bool
-	Speed    float64
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
+
+func TestCheckValidityErrorRaisesAnAlarmWhenNotValid(t *testing.T) {
+
+	input := false
+	alarm := checkValidityError(input)
+
+	expected := RAISED
+
+	assert.EqualValues(t, expected, alarm)
 }
 
-type EnableAction struct {
-}
+func TestCheckValidityErrorDoNotRaiseAnAlarmWhenValid(t *testing.T) {
 
-type DisableAction struct {
-}
+	input := true
+	alarm := checkValidityError(input)
 
-// Enable the autopilot
-func (p *Pilot) Enable() {
-	p.inputChan <- EnableAction{}
-}
+	expected := UNRAISED
 
-// Disable the autopilot
-func (p *Pilot) Disable() {
-	p.inputChan <- DisableAction{}
-}
-
-func (p *Pilot) enable() {
-	p.enabled = true
-	p.headingSet = false
-}
-
-func (p *Pilot) disable() {
-	p.enabled = false
-	p.alarm = UNRAISED
+	assert.EqualValues(t, expected, alarm)
 }
