@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 14:10:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 20:50:41
+* @Last Modified time: 2015-09-21 20:52:11
  */
 
 package pwm
@@ -113,10 +113,10 @@ func (p Pwm) Enable() error {
 
 // Disable this pwm
 func (p Pwm) Disable() error {
-	err := writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/enable", p.pin), "0")
+	err := p.setDutyCycleNanoSec(0)
 	if err != nil {
 		return err
 	}
 
-	return p.setDutyCycleNanoSec(0)
+	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/enable", p.pin), "0")
 }
