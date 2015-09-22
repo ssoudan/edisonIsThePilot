@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 10:24:57
+* @Last Modified time: 2015-09-22 13:16:08
  */
 
 package pilot
@@ -212,6 +212,7 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 func (p *Pilot) updateAfterTimeout() {
 	if p.enabled {
 		p.alarm = RAISED
+		p.leds[dashboard.NoGPSFix] = true
 	}
 }
 

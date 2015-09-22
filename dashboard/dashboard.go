@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 16:30:19
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 23:51:35
+* @Last Modified time: 2015-09-22 13:14:47
  */
 
 package dashboard
@@ -128,7 +128,6 @@ func (d Dashboard) Start() {
 				case message:
 					d.processMessage(m)
 				}
-
 			}
 
 		}

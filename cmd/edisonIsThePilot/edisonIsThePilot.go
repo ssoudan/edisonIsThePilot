@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 13:10:47
+* @Last Modified time: 2015-09-22 13:23:05
  */
 
 package main
@@ -33,6 +33,7 @@ import (
 
 	// "github.com/ssoudan/edisonIsThePilot/compass/hmc"
 	"github.com/ssoudan/edisonIsThePilot/alarm"
+	"github.com/ssoudan/edisonIsThePilot/conf"
 	"github.com/ssoudan/edisonIsThePilot/control"
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
 	"github.com/ssoudan/edisonIsThePilot/drivers/gpio"
@@ -45,32 +46,6 @@ import (
 )
 
 var log = logger.Log("edisonIsThePilot")
-
-var messageToPin = map[string]byte{
-	dashboard.NoGPSFix:                40, // J19 - pin 10
-	dashboard.InvalidGPSData:          43, // J19 - pin 11
-	dashboard.SpeedTooLow:             48, // J19 - pin 6
-	dashboard.HeadingErrorOutOfBounds: 82, // J19 - pin 13
-	dashboard.CorrectionAtLimit:       83, // J19 - pin 14
-}
-
-const (
-	alarmGpioPin  = 183 // J18 - pin 8
-	alarmGpioPWM  = 3
-	motorDirPin   = 165 // J18 - pin 2
-	motorSleepPin = 12  // J18 - pin 7
-	motorStepPin  = 182 // J17 - pin 1
-	motorStepPwm  = 2
-	switchGpioPin = 46 // J19 - pin 5
-)
-
-const (
-	maxPIDOutputLimits = 15
-	minPIDOutputLimits = -15
-	p                  = 1
-	i                  = 0.1
-	d                  = 0.1
-)
 
 func main() {
 
@@ -166,7 +141,7 @@ func main() {
 
 		return g
 	}
-	for k, v := range messageToPin {
+	for k, v := range conf.MessageToPin {
 		dashboard.RegisterMessageHandler(k, mapMessageToGPIO(k, v))
 	}
 
@@ -176,7 +151,7 @@ func main() {
 	alarmPwm := func(pin byte, pwmId byte) *pwm.Pwm {
 
 		// kill the process (via log.Fatal) in case we can't create the PWM
-		pwm, err := pwm.New(alarmGpioPWM, pin)
+		pwm, err := pwm.New(pwmId, pin)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -206,7 +181,7 @@ func main() {
 		log.Info("[AUTOTEST] alarm is OFF")
 
 		return pwm
-	}(alarmGpioPin, alarmGpioPWM)
+	}(conf.AlarmGpioPin, conf.AlarmGpioPWM)
 
 	alarm := alarm.New(alarmPwm)
 	alarmChan := make(chan interface{})
@@ -215,7 +190,11 @@ func main() {
 	////////////////////////////////////////
 	// an astonishing steering
 	////////////////////////////////////////
-	motor := motor.New(motorStepPin, motorStepPwm, motorDirPin, motorSleepPin)
+	motor := motor.New(
+		conf.MotorStepPin,
+		conf.MotorStepPwm,
+		conf.MotorDirPin,
+		conf.MotorSleepPin)
 
 	steering := steering.New(motor)
 	steeringChan := make(chan interface{})
@@ -224,13 +203,13 @@ func main() {
 	////////////////////////////////////////
 	// PID stuffs
 	////////////////////////////////////////
-	pidController := pidctrl.NewPIDController(p, i, d)
-	pidController.SetOutputLimits(minPIDOutputLimits, maxPIDOutputLimits)
+	pidController := pidctrl.NewPIDController(conf.P, conf.I, conf.D)
+	pidController.SetOutputLimits(conf.MinPIDOutputLimits, conf.MaxPIDOutputLimits)
 
 	////////////////////////////////////////
 	// pilot stuffs
 	////////////////////////////////////////
-	thePilot := pilot.New(pidController, 15.)
+	thePilot := pilot.New(pidController, conf.Bounds)
 	pilotChan := make(chan interface{})
 	thePilot.SetInputChan(pilotChan)
 	thePilot.SetDashboardChan(dashboardChan)
@@ -280,13 +259,13 @@ func main() {
 		log.Info("[AUTOTEST] current switch position is %s", switchState)
 
 		return g
-	}(switchGpioPin)
+	}(conf.SwitchGpioPin)
 	control := control.New(switchGpio, thePilot)
 
 	////////////////////////////////////////
 	// gps stuffs
 	////////////////////////////////////////
-	gps := gps.New("/dev/ttyMFD1")
+	gps := gps.New(conf.GpsSerialPort)
 	gps.SetMessagesChan(pilotChan)
 	gps.SetErrorChan(pilotChan)
 
