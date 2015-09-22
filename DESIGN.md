@@ -129,7 +129,15 @@ For the first iteration, the heading set point will be defined as the current he
 
 ### 3.1 Requirements
 
-<!-- TODO(ssoudan) copy requirements of section 1.1 -->
+Let's go over requirements of section 1.1.
+
+- emergency disconnect: the stepper motor will be 'sleeping' mode (no holding torque) all the time but when it is actually driving the motor - two switches will be available: one to enable/disable the autopilot (soft), one to power on/off the system. When the system is powered off, there is no holding torque from the motor either.
+- powerful enough actuator: stepper motor with adjustable torque (current limiting on the stepper driver board)
+- as little button as possible: 2 ON/OFF switches
+- ability to tune/calibrate the system on-board: TODO
+  - sinusoidal steering wheel input of know amplitude and frequency -- for different frequencies
+  - record/export track
+  - ability to change the parameters
 
 *Note:* it would be nice to be able to disable the feedback to be able to experimentally identify the dynamic characteristic of rudder-boat system and tune the PID controller from that. 
 
@@ -137,10 +145,7 @@ For the first iteration, the heading set point will be defined as the current he
 - Measure the track
 - Be able to export data
 
-TODO(ssoudan)
-
-Seems that compass calibration might be required here to prevent non-linear behaviors.
-Would be nice to be able to disable the feedback to be able to experimentally identify the rudder-boat system and tune the PID controller from that. Which means being able to export data (serial interface?).
+Not implemented yet.
 
 ### 3.2 Subsystems
 
@@ -149,11 +154,10 @@ Seems that compass calibration might be required here to prevent non-linear beha
 
 The utilisation of a GPS to get the heading also brings some constraints but we will investiguate this way.
 
-
 #### 3.2.2 Rudder control
 For now, we will assume we don't need a closed-loop control system here and the existing steering chain is fine. But we need to make sure there is as little  slackness as possible in the chain made of the motor, the steering wheel, and the rudder.
 
-<!-- TODO(ssoudan) mechanical interface? -->
+The stepper motor is driven at constant speed for a duration which depends on the requested rotation. Direction of the rotation is defined when the movement is requested. Positive rotation are made in clockwise direction (for the motor). 
 
 ### 3.3 Platform and components
 
@@ -260,7 +264,7 @@ We don't use that yet.
 #### 3.4.3 Interfacing with the GPS 
 We will use [adrianmo/go-nmea](https://github.com/adrianmo/go-nmea) library to decode the messages and use [tarm/serial](https://github.com/tarm/serial) to access the serial interface. We use `/dev/ttyMFD1` serial interface.
 
-For now, only the [GPRMC](http://aprs.gids.nl/nmea/#rmc) sentence will be used:
+The [GPRMC](http://aprs.gids.nl/nmea/#rmc) sentence will be used:
 
     $GPRMC,hhmmss.ss,A,llll.ll,a,yyyyy.yy,a,x.x,x.x,ddmmyy,x.x,a*hh
     1    = UTC of position fix
@@ -276,7 +280,26 @@ For now, only the [GPRMC](http://aprs.gids.nl/nmea/#rmc) sentence will be used:
     11   = E or W
     12   = Checksum
 
-<!-- TODO(ssoudan) need to also consider the sentence with signal quality for the disengagement feature -->
+As well as the [GPGGA](http://aprs.gids.nl/nmea/#gga):
+    $GPGGA,hhmmss.ss,llll.ll,a,yyyyy.yy,a,x,xx,x.x,x.x,M,x.x,M,x.x,xxxx*hh
+    1    = UTC of Position
+    2    = Latitude
+    3    = N or S
+    4    = Longitude
+    5    = E or W
+    6    = GPS quality indicator (0=invalid; 1=GPS fix; 2=Diff. GPS fix)
+    7    = Number of satellites in use [not those in view]
+    8    = Horizontal dilution of position
+    9    = Antenna altitude above/below mean sea level (geoid)
+    10   = Meters  (Antenna height unit)
+    11   = Geoidal separation (Diff. between WGS-84 earth ellipsoid and
+           mean sea level.  -=geoid is below WGS-84 ellipsoid)
+    12   = Meters  (Units of geoidal separation)
+    13   = Age in seconds since last update from diff. reference station
+    14   = Diff. reference station ID#
+    15   = Checksum
+
+First is used for the heading and speed, second is used for the fix quality (field #6).
 
 #### 3.4.4 PID controller
 
@@ -289,17 +312,37 @@ We use the following golang implementation of a PID: [felixge/pidctrl](https://g
 
 #### 3.4.5 Software Architecture
 
+The software is architectured around 6 components: 
+
+- gps -- which streams the position, heading, speed and signal quality
+- control -- which collects user inputs 
+- pilot -- which determine the heading error and correction to apply to the steering 
+- steering -- which controls the steering of the boat
+- dashboard -- which display notifications
+- alarm - which controls the sound alarm
+
+Each component as a single event loop implemented as a go routine.
+It reads on the input channels, does what it has to do and send messages to another component. Components are created, wired, started and shutdown in `cmd/edisonIsThePilot.go`.
+
+`conf/conf.go` contains the pin mapping and definition of constants.
+
+`drivers` folder contains the drivers for the I/O subsystem used in this project: gpio, pwm, stepper motor, serial-attached gps.
+
+#### 3.4.6 OS integration
+
+<!-- TODO(ssoudan) integration with boot -->
+<!-- TODO(ssoudan) integration with watchdog -->
+<!-- TODO(ssoudan) integration with logs -->
+
+#### 3.4.7 Mechanical integration
+
 <!-- TODO(ssoudan) -->
 
-#### 3.4.6 Mechanical integration
-
-<!-- TODO(ssoudan) -->
-
-#### 3.4.6 Power source
+#### 3.4.8 Power source
 We use a 12v power source. This is the fed directly to the Vin of the Edison and the Big EasyDriver which control the stepper motor. 
 For the other components (GPS and level shifters), we have 2 regulators on the board to obtain 3.3V and 5v regulated.
 
-#### 3.4.7 Security
+#### 3.4.9 Security
 
 <!-- TODO(ssoudan) -->
 - operating conditions
@@ -313,3 +356,13 @@ For the other components (GPS and level shifters), we have 2 regulators on the b
 ### 3.5.1 Boundaries 
 
 <!-- TODO(ssoudan) -->
+
+
+### 3.6 Missing parts
+
+- fuse
+- 12v regulator
+- spare parts
+- labels
+- case
+

@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 13:23:05
+* @Last Modified time: 2015-09-22 20:49:49
  */
 
 package main
@@ -261,6 +261,8 @@ func main() {
 		return g
 	}(conf.SwitchGpioPin)
 	control := control.New(switchGpio, thePilot)
+
+	// TODO(ssoudan) if the value of the switch at start is true, the trigger the alarm, we have rebooted while the pilot was enabled
 
 	////////////////////////////////////////
 	// gps stuffs
