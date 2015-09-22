@@ -18,11 +18,15 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 22:53:24
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 22:54:17
+* @Last Modified time: 2015-09-22 14:03:38
  */
 
 package pilot
 
+import (
+	"github.com/ssoudan/edisonIsThePilot/conf"
+)
+
 func checkSpeedError(speed float64) Alarm {
-	return Alarm(speed < MinimumSpeedInKnots)
+	return Alarm(speed < conf.MinimumSpeedInKnots)
 }

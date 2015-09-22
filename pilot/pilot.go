@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 13:16:08
+* @Last Modified time: 2015-09-22 14:03:20
  */
 
 package pilot
@@ -27,17 +27,13 @@ import (
 	"time"
 
 	"github.com/ssoudan/edisonIsThePilot/alarm"
+	"github.com/ssoudan/edisonIsThePilot/conf"
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 	"github.com/ssoudan/edisonIsThePilot/steering"
 )
 
 var log = logger.Log("pilot")
-
-const (
-	NoInputMessageTimeoutInSeconds = 10
-	MinimumSpeedInKnots            = 3
-)
 
 type Pilot struct {
 	heading float64 // target heading (set point)
@@ -235,7 +231,7 @@ func (p Pilot) Start() {
 				case error:
 					log.Error("Received an error: %v", m)
 				}
-			case <-time.After(NoInputMessageTimeoutInSeconds * time.Second):
+			case <-time.After(conf.NoInputMessageTimeoutInSeconds * time.Second):
 				p.updateAfterTimeout()
 			}
 

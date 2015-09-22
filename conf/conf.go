@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:18:01
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 13:23:18
+* @Last Modified time: 2015-09-22 14:06:30
  */
 
 package conf
@@ -46,11 +46,13 @@ const (
 )
 
 const (
-	MaxPIDOutputLimits = 15
-	MinPIDOutputLimits = -15
-	P                  = 1
-	I                  = 0.1
-	D                  = 0.1
-	Bounds             = 15.
-	GpsSerialPort      = "/dev/ttyMFD1"
+	MaxPIDOutputLimits             = 15
+	MinPIDOutputLimits             = -15
+	P                              = 1
+	I                              = 0.1
+	D                              = 0.1
+	Bounds                         = 15.
+	GpsSerialPort                  = "/dev/ttyMFD1"
+	NoInputMessageTimeoutInSeconds = 10
+	MinimumSpeedInKnots            = 3
 )

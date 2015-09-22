@@ -18,19 +18,22 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 22:49:13
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 23:08:32
+* @Last Modified time: 2015-09-22 14:04:40
  */
 
 package pilot
 
 import (
+	"github.com/ssoudan/edisonIsThePilot/conf"
+
 	"github.com/stretchr/testify/assert"
+
 	"testing"
 )
 
 func TestCheckSpeedErrorRaisesAnAlarmWhenTooSlow(t *testing.T) {
 
-	input := MinimumSpeedInKnots * 0.9
+	input := conf.MinimumSpeedInKnots * 0.9
 	alarm := checkSpeedError(input)
 
 	expected := RAISED
@@ -40,7 +43,7 @@ func TestCheckSpeedErrorRaisesAnAlarmWhenTooSlow(t *testing.T) {
 
 func TestCheckSpeedErrorDoNotRaiseAnAlarmWhenLargeEnougt(t *testing.T) {
 
-	input := MinimumSpeedInKnots * 1.1
+	input := conf.MinimumSpeedInKnots * 1.1
 	alarm := checkSpeedError(input)
 
 	expected := UNRAISED
