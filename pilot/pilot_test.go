@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 23:12:03
+* @Last Modified time: 2015-09-22 10:24:11
  */
 
 package pilot
@@ -44,6 +44,10 @@ func (c *testConstroller) Update(value float64) float64 {
 	log.Info("Update has been called with %v", value)
 	c.lastValue = value
 	return 2.
+}
+
+func (c testConstroller) OutputLimits() (float64, float64) {
+	return -10, 10
 }
 
 func TestThatTellTheWorldSendTheAlarmFirst(t *testing.T) {

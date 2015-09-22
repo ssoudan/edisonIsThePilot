@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 14:10:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 22:35:57
+* @Last Modified time: 2015-09-22 10:25:56
  */
 
 package gpio
@@ -93,8 +93,8 @@ func (p Gpio) SetActiveLevel(level string) error {
 	return writeTo(fmt.Sprintf("/sys/class/gpio/gpio%d/active_low", p.pin), level)
 }
 
-// GetValue returns the value of the GPIO
-func (p Gpio) GetValue() (bool, error) {
+// Value returns the value of the GPIO
+func (p Gpio) Value() (bool, error) {
 	val, err := readfrom(fmt.Sprintf("/sys/class/gpio/gpio%d/active_low", p.pin))
 	if err != nil {
 		return false, err

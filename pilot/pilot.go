@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 23:13:11
+* @Last Modified time: 2015-09-22 10:24:57
  */
 
 package pilot
@@ -60,6 +60,7 @@ type Pilot struct {
 type Controller interface {
 	Set(sp float64)
 	Update(value float64) float64
+	OutputLimits() (float64, float64)
 }
 
 type Leds map[Led]bool
@@ -178,7 +179,11 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 		if steeringEnabled {
 			log.Notice("Steering Enabled")
 
-			// TODO(ssoudan) check the PID output
+			// check the PID output
+			minPIDoutput, maxPIDOutput := p.pid.OutputLimits()
+			if headingControl <= minPIDoutput || headingControl >= maxPIDOutput {
+				p.leds[dashboard.CorrectionAtLimit] = true
+			}
 
 			p.steeringChan <- steering.NewMessage(headingControl)
 
@@ -196,6 +201,7 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 		p.leds[dashboard.HeadingErrorOutOfBounds] = false // Doesn't make sense when disabled
 		p.leds[dashboard.InvalidGPSData] = bool(validityAlarm)
 		p.leds[dashboard.SpeedTooLow] = bool(speedAlarm)
+		p.leds[dashboard.CorrectionAtLimit] = false // Doesn't make sense when disabled
 
 		////////////////////////
 		// </This section is updated when the pilot is not enabled>
