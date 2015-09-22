@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 14:03:20
+* @Last Modified time: 2015-09-22 16:02:29
  */
 
 package pilot
@@ -151,10 +151,13 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 	// Update pilot state from previous checks
 	////////////////////////
 	if p.enabled {
-		log.Notice("Heading error is %v", headingError)
 
 		// Update alarm state from the previously computed alarms
 		p.alarm = p.alarm || headingAlarm || validityAlarm || speedAlarm
+
+		if p.alarm == UNRAISED {
+			log.Notice("Heading error is %v", headingError)
+		}
 
 		// Update alarm state from the previously computed alarms
 		if bool(headingAlarm) {
@@ -168,11 +171,12 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 		}
 
 		headingControl := p.pid.Update(headingError)
-		log.Notice("Heading control is %v", headingControl)
 
 		steeringEnabled := p.computeSteeringState()
 
 		if steeringEnabled {
+			log.Notice("Heading control is %v", headingControl)
+
 			log.Notice("Steering Enabled")
 
 			// check the PID output
@@ -212,6 +216,12 @@ func (p *Pilot) updateAfterTimeout() {
 	}
 }
 
+func (p *Pilot) updateAfterError() {
+	if p.enabled {
+		p.alarm = RAISED
+	}
+}
+
 // Start the event loop of the Pilot component
 func (p Pilot) Start() {
 	go func() {
@@ -230,6 +240,7 @@ func (p Pilot) Start() {
 					p.disable()
 				case error:
 					log.Error("Received an error: %v", m)
+					p.updateAfterError()
 				}
 			case <-time.After(conf.NoInputMessageTimeoutInSeconds * time.Second):
 				p.updateAfterTimeout()

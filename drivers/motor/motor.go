@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 18:58:22
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 13:52:33
+* @Last Modified time: 2015-09-22 14:16:43
  */
 
 package motor
@@ -107,14 +107,12 @@ func (m Motor) Disable() error {
 func (m Motor) Move(clockwise bool, stepsBySecond uint32, duration time.Duration) error {
 	var err error
 	if clockwise {
-		log.Debug("Enable dirGPIO")
 		err = m.dirGPIO.Enable()
 		if err != nil {
 			log.Error("Failed to set direction: %v", err)
 			return err
 		}
 	} else {
-		log.Debug("Disable dirGPIO")
 		err = m.dirGPIO.Disable()
 		if err != nil {
 			log.Error("Failed to set direction: %v", err)
@@ -148,7 +146,6 @@ func (m Motor) Move(clockwise bool, stepsBySecond uint32, duration time.Duration
 	if err != nil {
 		return err
 	}
-	log.Debug("rotation [clockwise=%v,period=%v,duration=%v]", clockwise, period, duration)
 	time.Sleep(duration)
 	err = m.Disable()
 	if err != nil {
