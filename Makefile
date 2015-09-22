@@ -21,15 +21,15 @@ GOCMD=$(FLAGS) go
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOINSTALL=$(GOCMD) install
-GOTEST=$(GOCMD) test
-GODEP=$(GOTEST) -i
+GOTEST=go test -cover
+GODEP=$(GOCMD) test -i
 GOFMT=gofmt -w
 
 # Package lists
 TOPLEVEL_PKG := github.com/ssoudan/edisonIsThePilot
 INT_LIST :=  #<-- Interface directories
-IMPL_LIST := gps infrastructure/logger pwm gpio compass/hmc #<-- Implementation directories
-CMD_LIST := cmd/edisonIsThePilot #<-- Command directories
+IMPL_LIST := conf control alarm dashboard pilot gps steering drivers/pwm drivers/gpio drivers/compass/hmc drivers/motor  infrastructure/logger  #<-- Implementation directories
+CMD_LIST := cmd/edisonIsThePilot cmd/motorControl #<-- Command directories
 
 # List building
 ALL_LIST = $(INT_LIST) $(IMPL_LIST) $(CMD_LIST)

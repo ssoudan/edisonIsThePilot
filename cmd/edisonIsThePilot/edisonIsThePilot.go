@@ -18,102 +18,36 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-19 15:02:05
+* @Last Modified time: 2015-09-22 13:23:05
  */
 
 package main
 
 import (
+	"github.com/felixge/pidctrl"
+
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	// "github.com/ssoudan/edisonIsThePilot/compass/hmc"
-	"github.com/ssoudan/edisonIsThePilot/gpio"
+	"github.com/ssoudan/edisonIsThePilot/alarm"
+	"github.com/ssoudan/edisonIsThePilot/conf"
+	"github.com/ssoudan/edisonIsThePilot/control"
+	"github.com/ssoudan/edisonIsThePilot/dashboard"
+	"github.com/ssoudan/edisonIsThePilot/drivers/gpio"
+	"github.com/ssoudan/edisonIsThePilot/drivers/motor"
+	"github.com/ssoudan/edisonIsThePilot/drivers/pwm"
 	"github.com/ssoudan/edisonIsThePilot/gps"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
-	"github.com/ssoudan/edisonIsThePilot/pwm"
-
-	"github.com/adrianmo/go-nmea"
+	"github.com/ssoudan/edisonIsThePilot/pilot"
+	"github.com/ssoudan/edisonIsThePilot/steering"
 )
 
 var log = logger.Log("edisonIsThePilot")
 
 func main() {
-	var err error
-
-	////////////////////////////////////////
-	// PWM stuffs
-	////////////////////////////////////////
-	err = gpio.EnablePWM(182)
-	if err != nil {
-		log.Fatal("Failed to set pin 182 to pwm2: %v", err)
-	}
-	var pwm = pwm.New(2)
-	if !pwm.IsExported() {
-		err = pwm.Export()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	pwm.Disable()
-
-	if err = pwm.SetPeriodAndDutyCycle(10*time.Millisecond, 0.5); err != nil {
-		log.Fatal(err)
-	}
-
-	if err = pwm.Enable(); err != nil {
-		log.Fatal(err)
-	}
-	log.Info("pwm configured")
-	time.Sleep(100 * time.Second)
-
-	pwm.Disable()
-	pwm.Unexport()
-
-	////////////////////////////////////////
-	// GPIO stuffs
-	////////////////////////////////////////
-	err = gpio.EnableGPIO(165)
-	if err != nil {
-		log.Fatal("Failed to set pin 182 to pwm2: %v", err)
-	}
-	var gpio165 = gpio.New(165)
-	if !gpio165.IsExported() {
-		log.Debug("GPIO165 not exported")
-		err = gpio165.Export()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	err = gpio165.SetDirection(gpio.OUT)
-	if err != nil {
-		log.Fatal("Failed to set direction: %v", err)
-	}
-
-	for i := 0; i < 4; i++ {
-		err = gpio165.Enable()
-		if err != nil {
-			log.Fatal("Failed to enable: %v", err)
-		}
-		log.Debug("GPIO up")
-		time.Sleep(1 * time.Second)
-		err = gpio165.Disable()
-		if err != nil {
-			log.Fatal("Failed to disable: %v", err)
-		}
-		log.Debug("GPIO down")
-		time.Sleep(1 * time.Second)
-	}
-	err = gpio165.Disable()
-	if err != nil {
-		log.Fatal("Failed to disable: %v", err)
-	}
-
-	err = gpio165.Unexport()
-	if err != nil {
-		log.Fatal("Failed to unexport: %v", err)
-	}
 
 	////////////////////////////////////////
 	// HMC5883 stuffs
@@ -157,24 +91,207 @@ func main() {
 	// data, err := bp.ReadByteBlock(addr, reg, length)
 
 	////////////////////////////////////////
-	// gps stuffs
+	// a beautiful dashboard
 	////////////////////////////////////////
-	gps := gps.New("/dev/ttyMFD1")
-	messagesChan, errorChan := gps.Stream()
+	dashboard := dashboard.New()
+	dashboardChan := make(chan interface{})
+	dashboard.SetInputChan(dashboardChan)
+	mapMessageToGPIO := func(message string, pin byte) gpio.Gpio {
 
-	for {
-		select {
-		case m := <-messagesChan:
-			switch t := m.(type) {
-			default:
-				// don't care
-				log.Debug("%+v\n", m)
-			case nmea.GPRMC:
-				log.Info("[GPRMC] validity: %v heading: %v[˚] speed: %v[knots] \n", t.Validity == "A", t.Course, t.Speed)
-			}
-		case err := <-errorChan:
-			log.Warning("Error while processing GPS message: %v", err)
+		// kill the process (via log.Fatal) in case we can't create the GPIO
+		err := gpio.EnableGPIO(pin)
+		if err != nil {
+			log.Fatal(err)
 		}
+
+		var g = gpio.New(pin)
+		if !g.IsExported() {
+			err = g.Export()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		err = g.SetDirection(gpio.OUT)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Test Disabled and Enabled state for each LEDs
+		err = g.Disable()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Info("[AUTOTEST] %s LED is ON", message)
+		time.Sleep(1 * time.Second)
+
+		err = g.Enable()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Info("[AUTOTEST] %s LED is OFF", message)
+		time.Sleep(1 * time.Second)
+
+		err = g.Disable()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return g
+	}
+	for k, v := range conf.MessageToPin {
+		dashboard.RegisterMessageHandler(k, mapMessageToGPIO(k, v))
 	}
 
+	////////////////////////////////////////
+	// a nice alarm
+	////////////////////////////////////////
+	alarmPwm := func(pin byte, pwmId byte) *pwm.Pwm {
+
+		// kill the process (via log.Fatal) in case we can't create the PWM
+		pwm, err := pwm.New(pwmId, pin)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if !pwm.IsExported() {
+			err = pwm.Export()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		pwm.Disable()
+
+		if err = pwm.SetPeriodAndDutyCycle(200*time.Millisecond, 0.5); err != nil {
+			log.Fatal(err)
+		}
+
+		if err = pwm.Enable(); err != nil {
+			log.Fatal(err)
+		}
+		log.Info("[AUTOTEST] alarm is ON")
+
+		time.Sleep(2 * time.Second)
+		if err = pwm.Disable(); err != nil {
+			log.Fatal(err)
+		}
+		log.Info("[AUTOTEST] alarm is OFF")
+
+		return pwm
+	}(conf.AlarmGpioPin, conf.AlarmGpioPWM)
+
+	alarm := alarm.New(alarmPwm)
+	alarmChan := make(chan interface{})
+	alarm.SetInputChan(alarmChan)
+
+	////////////////////////////////////////
+	// an astonishing steering
+	////////////////////////////////////////
+	motor := motor.New(
+		conf.MotorStepPin,
+		conf.MotorStepPwm,
+		conf.MotorDirPin,
+		conf.MotorSleepPin)
+
+	steering := steering.New(motor)
+	steeringChan := make(chan interface{})
+	steering.SetInputChan(steeringChan)
+
+	////////////////////////////////////////
+	// PID stuffs
+	////////////////////////////////////////
+	pidController := pidctrl.NewPIDController(conf.P, conf.I, conf.D)
+	pidController.SetOutputLimits(conf.MinPIDOutputLimits, conf.MaxPIDOutputLimits)
+
+	////////////////////////////////////////
+	// pilot stuffs
+	////////////////////////////////////////
+	thePilot := pilot.New(pidController, conf.Bounds)
+	pilotChan := make(chan interface{})
+	thePilot.SetInputChan(pilotChan)
+	thePilot.SetDashboardChan(dashboardChan)
+	thePilot.SetAlarmChan(alarmChan)
+	thePilot.SetSteeringChan(steeringChan)
+
+	////////////////////////////////////////
+	// input stuffs
+	////////////////////////////////////////
+	switchGpio := func(pin byte) gpio.Gpio {
+
+		// kill the process (via log.Fatal) in case we can't create the GPIO
+		err := gpio.EnableGPIO(pin)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var g = gpio.New(pin)
+		if !g.IsExported() {
+			err = g.Export()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		err = g.SetDirection(gpio.IN)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = g.SetActiveLevel(gpio.ACTIVE_HIGH)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Test we can read it
+		value, err := g.Value()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		switchState := "OFF"
+		if value {
+			switchState = "ON"
+		}
+
+		log.Info("[AUTOTEST] current switch position is %s", switchState)
+
+		return g
+	}(conf.SwitchGpioPin)
+	control := control.New(switchGpio, thePilot)
+
+	////////////////////////////////////////
+	// gps stuffs
+	////////////////////////////////////////
+	gps := gps.New(conf.GpsSerialPort)
+	gps.SetMessagesChan(pilotChan)
+	gps.SetErrorChan(pilotChan)
+
+	gps.Start()
+	dashboard.Start()
+	alarm.Start()
+	thePilot.Start()
+	steering.Start()
+	control.Start()
+
+	// Wait until we receive a signal
+	waitForInterrupt()
+
+	dashboard.Shutdown()
+	alarm.Shutdown()
+	steering.Shutdown()
+	control.Shutdown()
 }
+
+func waitForInterrupt() {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	select {
+	case <-sigChan:
+		log.Info("Interrupted - exiting")
+	}
+}
+
+// TODO(ssoudan) set alarm if exited under an error condition
