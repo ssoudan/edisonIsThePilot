@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 10:25:18
+* @Last Modified time: 2015-09-22 13:10:47
  */
 
 package main
@@ -33,6 +33,7 @@ import (
 
 	// "github.com/ssoudan/edisonIsThePilot/compass/hmc"
 	"github.com/ssoudan/edisonIsThePilot/alarm"
+	"github.com/ssoudan/edisonIsThePilot/control"
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
 	"github.com/ssoudan/edisonIsThePilot/drivers/gpio"
 	"github.com/ssoudan/edisonIsThePilot/drivers/motor"
@@ -60,6 +61,7 @@ const (
 	motorSleepPin = 12  // J18 - pin 7
 	motorStepPin  = 182 // J17 - pin 1
 	motorStepPwm  = 2
+	switchGpioPin = 46 // J19 - pin 5
 )
 
 const (
@@ -171,15 +173,14 @@ func main() {
 	////////////////////////////////////////
 	// a nice alarm
 	////////////////////////////////////////
-	alarmPwm := func(pin byte, pwmId byte) pwm.Pwm {
+	alarmPwm := func(pin byte, pwmId byte) *pwm.Pwm {
 
 		// kill the process (via log.Fatal) in case we can't create the PWM
-		err := gpio.EnablePWM(pin)
+		pwm, err := pwm.New(alarmGpioPWM, pin)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		var pwm = pwm.New(alarmGpioPWM)
 		if !pwm.IsExported() {
 			err = pwm.Export()
 			if err != nil {
@@ -237,6 +238,52 @@ func main() {
 	thePilot.SetSteeringChan(steeringChan)
 
 	////////////////////////////////////////
+	// input stuffs
+	////////////////////////////////////////
+	switchGpio := func(pin byte) gpio.Gpio {
+
+		// kill the process (via log.Fatal) in case we can't create the GPIO
+		err := gpio.EnableGPIO(pin)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var g = gpio.New(pin)
+		if !g.IsExported() {
+			err = g.Export()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		err = g.SetDirection(gpio.IN)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = g.SetActiveLevel(gpio.ACTIVE_HIGH)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Test we can read it
+		value, err := g.Value()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		switchState := "OFF"
+		if value {
+			switchState = "ON"
+		}
+
+		log.Info("[AUTOTEST] current switch position is %s", switchState)
+
+		return g
+	}(switchGpioPin)
+	control := control.New(switchGpio, thePilot)
+
+	////////////////////////////////////////
 	// gps stuffs
 	////////////////////////////////////////
 	gps := gps.New("/dev/ttyMFD1")
@@ -248,18 +295,7 @@ func main() {
 	alarm.Start()
 	thePilot.Start()
 	steering.Start()
-
-	// For tests
-	go func() {
-		for {
-			log.Notice("Disabling the pilot")
-			thePilot.Disable()
-			time.Sleep(35 * time.Second)
-			log.Notice("Enabling the pilot")
-			thePilot.Enable()
-			time.Sleep(35 * time.Second)
-		}
-	}()
+	control.Start()
 
 	// Wait until we receive a signal
 	waitForInterrupt()
@@ -267,6 +303,7 @@ func main() {
 	dashboard.Shutdown()
 	alarm.Shutdown()
 	steering.Shutdown()
+	control.Shutdown()
 }
 
 func waitForInterrupt() {

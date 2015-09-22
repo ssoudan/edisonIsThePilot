@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 18:58:22
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 22:17:14
+* @Last Modified time: 2015-09-22 13:09:42
  */
 
 package motor
@@ -37,7 +37,7 @@ type Motor struct {
 	dirGPIO gpio.Gpio
 
 	sleepGPIO gpio.Gpio
-	stepPwm   pwm.Pwm
+	stepPwm   *pwm.Pwm
 }
 
 func check(err error) {
@@ -83,10 +83,8 @@ func New(stepPin, stepPwmId, dirPin, sleepPin byte) *Motor {
 	check(err)
 
 	// Create the Step pwm
-	err = gpio.EnablePWM(stepPin)
+	stepPwm, err := pwm.New(stepPwmId, stepPin)
 	check(err)
-
-	stepPwm := pwm.New(stepPwmId)
 	if !stepPwm.IsExported() {
 		err = stepPwm.Export()
 		check(err)
@@ -95,7 +93,7 @@ func New(stepPin, stepPwmId, dirPin, sleepPin byte) *Motor {
 	err = stepPwm.Disable()
 	check(err)
 
-	return &Motor{dirGPIO, sleepGPIO, stepPwm}
+	return &Motor{dirGPIO: dirGPIO, sleepGPIO: sleepGPIO, stepPwm: stepPwm}
 }
 
 func (m Motor) Enable() error {

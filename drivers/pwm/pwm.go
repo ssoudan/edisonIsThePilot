@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 14:10:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 21:09:58
+* @Last Modified time: 2015-09-22 13:08:03
  */
 
 package pwm
@@ -28,6 +28,8 @@ import (
 	"io/ioutil"
 	"os"
 	"time"
+
+	"github.com/ssoudan/edisonIsThePilot/drivers/gpio"
 )
 
 const (
@@ -38,13 +40,33 @@ const (
 )
 
 type Pwm struct {
-	pin       uint8
-	dutyCycle int64
+	pwmId  uint8
+	pwmPin byte
+	gpio   gpio.Gpio
 }
 
-// New returns a new PWM for a given pin - See Edison Breakout documentation to figure out which one you want.
-func New(pin uint8) Pwm {
-	return Pwm{pin: pin}
+// New returns a new PWM for a given pwmId - See Edison Breakout documentation to figure out which one you want.
+func New(pwmId uint8, pwmPin byte) (*Pwm, error) {
+	var err error
+	var g = gpio.New(pwmPin)
+	if !g.IsExported() {
+		err = g.Export()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err = g.SetDirection(gpio.OUT)
+	if err != nil {
+		return nil, err
+	}
+
+	err = g.Disable()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Pwm{pwmId: pwmId, pwmPin: pwmPin, gpio: g}, nil
 }
 
 func writeTo(filename string, content string) error {
@@ -53,7 +75,7 @@ func writeTo(filename string, content string) error {
 
 // IsExported returns true with the pwm is already exported and usable from sysfs.
 func (p Pwm) IsExported() bool {
-	if _, err := os.Stat(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/", p.pin)); os.IsNotExist(err) {
+	if _, err := os.Stat(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/", p.pwmId)); os.IsNotExist(err) {
 		return false
 	}
 	return true
@@ -61,12 +83,13 @@ func (p Pwm) IsExported() bool {
 
 // Export the pwm to be usable from sysfs.
 func (p Pwm) Export() error {
-	return writeTo("/sys/class/pwm/pwmchip0/export", fmt.Sprintf("%d", p.pin))
+
+	return writeTo("/sys/class/pwm/pwmchip0/export", fmt.Sprintf("%d", p.pwmId))
 }
 
 // Unexport the pwm from sysfs.
 func (p Pwm) Unexport() error {
-	return writeTo("/sys/class/pwm/pwmchip0/unexport", fmt.Sprintf("%d", p.pin))
+	return writeTo("/sys/class/pwm/pwmchip0/unexport", fmt.Sprintf("%d", p.pwmId))
 }
 
 // SetPeriodAndDutyCycle configures the pwm for a given period and duty cycle ratio.
@@ -87,9 +110,9 @@ func (p *Pwm) SetPeriodAndDutyCycle(period time.Duration, duty_cycle float32) er
 		return err
 	}
 
-	p.dutyCycle = (int64)(float32(period.Nanoseconds()) * duty_cycle)
+	dutyCycle := (int64)(float32(period.Nanoseconds()) * duty_cycle)
 
-	if err := p.setDutyCycleNanoSec(p.dutyCycle); err != nil {
+	if err := p.setDutyCycleNanoSec(dutyCycle); err != nil {
 		return err
 	}
 
@@ -97,7 +120,7 @@ func (p *Pwm) SetPeriodAndDutyCycle(period time.Duration, duty_cycle float32) er
 }
 
 func (p Pwm) setDutyCycleNanoSec(duty_cycle int64) error {
-	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/duty_cycle", p.pin), fmt.Sprintf("%d", duty_cycle))
+	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/duty_cycle", p.pwmId), fmt.Sprintf("%d", duty_cycle))
 }
 
 func (p Pwm) setPeriodNanoSecond(period int64) error {
@@ -106,24 +129,25 @@ func (p Pwm) setPeriodNanoSecond(period int64) error {
 		return fmt.Errorf("must be in 104:218453000 range")
 	}
 
-	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/period", p.pin), fmt.Sprintf("%d", period))
+	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/period", p.pwmId), fmt.Sprintf("%d", period))
 }
 
 // Enable this pwm
 func (p Pwm) Enable() error {
-	if err := p.setDutyCycleNanoSec(p.dutyCycle); err != nil {
-		return err
-	}
-
-	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/enable", p.pin), "1")
-}
-
-// Disable this pwm
-func (p Pwm) Disable() error {
-	err := p.setDutyCycleNanoSec(0)
+	err := gpio.EnablePWM(p.pwmPin)
 	if err != nil {
 		return err
 	}
 
-	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/enable", p.pin), "0")
+	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/enable", p.pwmId), "1")
+}
+
+// Disable this pwm
+func (p Pwm) Disable() error {
+	err := gpio.EnableGPIO(p.pwmPin)
+	if err != nil {
+		return err
+	}
+
+	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/enable", p.pwmId), "0")
 }

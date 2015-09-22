@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 14:10:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 10:25:56
+* @Last Modified time: 2015-09-22 12:49:29
  */
 
 package gpio
@@ -34,8 +34,8 @@ const (
 	OUT         = "out"
 	ACTIVE_HIGH = "0"
 	ACTIVE_LOW  = "1"
-	HIGH        = "1"
-	LOW         = "0"
+	HIGH        = "1\n"
+	LOW         = "0\n"
 )
 
 type Gpio struct {
@@ -95,17 +95,17 @@ func (p Gpio) SetActiveLevel(level string) error {
 
 // Value returns the value of the GPIO
 func (p Gpio) Value() (bool, error) {
-	val, err := readfrom(fmt.Sprintf("/sys/class/gpio/gpio%d/active_low", p.pin))
+	val, err := readfrom(fmt.Sprintf("/sys/class/gpio/gpio%d/value", p.pin))
 	if err != nil {
 		return false, err
 	}
 	switch val {
-	default:
-		return false, fmt.Errorf("invalid value")
 	case HIGH:
 		return true, nil
 	case LOW:
 		return false, nil
+	default:
+		return false, fmt.Errorf("invalid value: [%v]", val)
 	}
 
 }

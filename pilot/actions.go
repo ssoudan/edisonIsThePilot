@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 21:45:21
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 22:25:14
+* @Last Modified time: 2015-09-22 12:03:34
  */
 
 package pilot
@@ -36,13 +36,15 @@ type DisableAction struct {
 }
 
 // Enable the autopilot
-func (p *Pilot) Enable() {
+func (p *Pilot) Enable() error {
 	p.inputChan <- EnableAction{}
+	return nil
 }
 
 // Disable the autopilot
-func (p *Pilot) Disable() {
+func (p *Pilot) Disable() error {
 	p.inputChan <- DisableAction{}
+	return nil
 }
 
 func (p *Pilot) enable() {
