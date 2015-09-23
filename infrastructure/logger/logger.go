@@ -18,14 +18,21 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-03-31 21:34:39
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-19 12:03:51
+* @Last Modified time: 2015-09-23 13:18:39
  */
 
 package logger
 
 import (
 	"github.com/op/go-logging"
+
+	"fmt"
 	"os"
+)
+
+const (
+	logFilename = "/var/log/edisonIsThePilot.log"
+	maxSize     = 40 * 1024 * 1024 // 40MB
 )
 
 func Log(name string) *logging.Logger {
@@ -33,18 +40,38 @@ func Log(name string) *logging.Logger {
 }
 
 func init() {
-	format := logging.MustStringFormatter(
+	colorFormat := logging.MustStringFormatter(
 		"%{color:bold}%{time:15:04:05.000} %{level:-6s} [%{module}] %{shortfunc:.10s} ▶ %{id:03x}%{color:reset} %{message}",
 	)
 
 	backend := logging.NewLogBackend(os.Stderr, "", 0)
 
-	backendFormatter := logging.NewBackendFormatter(backend, format)
+	backendFormatter := logging.NewBackendFormatter(backend, colorFormat)
 
 	// Only errors and more severe messages should be sent to backend1
 	backendLeveled := logging.AddModuleLevel(backendFormatter)
 	backendLeveled.SetLevel(logging.DEBUG, "")
 
+	format := logging.MustStringFormatter(
+		"%{time:15:04:05.000} %{level:-6s} [%{module}] %{shortfunc:.10s} %{id:03x} %{message}",
+	)
+
+	rotatingWriter := New(logFilename, maxSize)
+	if rotatingWriter == nil {
+		fmt.Fprintf(os.Stderr, "Failed to open log file: %s - writing to stderr only.\n", logFilename)
+		// Set the backends to be used.
+		logging.SetBackend(backendLeveled)
+		return
+	}
+
+	rotatingBackend := logging.NewLogBackend(rotatingWriter, "", 0)
+
+	rotatingBackendFormatter := logging.NewBackendFormatter(rotatingBackend, format)
+
+	// Only errors and more severe messages should be sent to backend1
+	rotatingBackendLeveled := logging.AddModuleLevel(rotatingBackendFormatter)
+	rotatingBackendLeveled.SetLevel(logging.INFO, "")
+
 	// Set the backends to be used.
-	logging.SetBackend(backendLeveled)
+	logging.SetBackend(backendLeveled, rotatingBackendLeveled)
 }

@@ -1,7 +1,8 @@
 
 # Autopilot Design
 
-<a href="mailto:sebastien.soudan@gmail.com">Sebastien Soudan</a>
+<a href="https://github.com/ssoudan">Sebastien Soudan</a>
+<a href="https://github.com/philixxx">Philippe Martinez</a>
 
 ## Table of Contrent
 
@@ -330,13 +331,20 @@ It reads on the input channels, does what it has to do and send messages to anot
 
 #### 3.4.6 OS integration
 
-<!-- TODO(ssoudan) integration with boot -->
+##### Integration with the OS boot
+At boot the alarm is on until the edisonIsThePilot is started.
+rc.local starts it with a '/root/edisonIsThePilot 2> /dev/null ; reboot' so when it stops, the edison is restarted.
+
+##### Integration with the OS watchdog
 <!-- TODO(ssoudan) integration with watchdog -->
-<!-- TODO(ssoudan) integration with logs -->
+
+#### Log rotation
+`edisonIsThePilot` writes both to stderr and '/var/log/edisonIsThePilot.log'. When the program is started or when the size of the file gets greater than 40MB (check performed every `logger.maxWriteCountWithoutCheck` writes), 
+the file is rotated to /var/log/edisonIsThePilot.log.old (previous edisonIsThePilot.log.old is deleted) and a new '/var/log/edisonIsThePilot.log' is created.
 
 #### 3.4.7 Mechanical integration
 
-<!-- TODO(ssoudan) -->
+<!-- TODO(phi) -->
 
 #### 3.4.8 Power source
 We use a 12v power source. This is the fed directly to the Vin of the Edison and the Big EasyDriver which control the stepper motor. 
