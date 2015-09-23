@@ -9,7 +9,7 @@ of the License at
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or impliec. See the
 License for the specific language governing permissions and limitations
 under the License.
 */
@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 11:55:49
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 12:52:37
+* @Last Modified time: 2015-09-23 07:46:08
  */
 
 package control
@@ -37,7 +37,8 @@ type Control struct {
 	stateEnable    bool
 
 	// channels
-	pilotChan chan interface{}
+	pilotChan    chan interface{}
+	shutdownChan chan interface{}
 }
 
 type Enablable interface {
@@ -50,30 +51,30 @@ type Readable interface {
 }
 
 func New(controlHandler Readable, pilot Enablable) *Control {
-	return &Control{controlHandler: controlHandler, pilot: pilot}
+	return &Control{controlHandler: controlHandler, pilot: pilot, shutdownChan: make(chan interface{})}
 }
 
-func (d *Control) updateControlState() error {
+func (c *Control) updateControlState() error {
 
-	control := d.controlHandler
+	control := c.controlHandler
 	state, err := control.Value()
 	if err != nil {
 		log.Error("Failed to read switch value: %v", err)
 		return err
 	}
 
-	if state != d.stateEnable {
+	if state != c.stateEnable {
 		if state {
 			log.Warning("Enabling the pilot")
-			err = d.pilot.Enable()
+			err = c.pilot.Enable()
 
 		} else {
 			log.Warning("Disabling the pilot")
-			err = d.pilot.Disable()
+			err = c.pilot.Disable()
 		}
 
 		if err == nil {
-			d.stateEnable = state
+			c.stateEnable = state
 		}
 	}
 
@@ -82,21 +83,30 @@ func (d *Control) updateControlState() error {
 }
 
 // Shutdown sets all the state to down and notify the handlers
-func (d Control) Shutdown() {
+func (c Control) Shutdown() {
+	c.shutdownChan <- 1
+	<-c.shutdownChan
+}
+
+func (c Control) shutdown() {
 	// Nothing
+	close(c.shutdownChan)
 }
 
 // Start the event loop of the Control component
-func (d Control) Start() {
+func (c Control) Start() {
 
 	go func() {
 		for true {
 			select {
 			case <-time.After(100 * time.Millisecond):
-				err := d.updateControlState()
+				err := c.updateControlState()
 				if err != nil {
 					log.Error("Error while updating control: %v", err)
 				}
+			case <-c.shutdownChan:
+				c.shutdown()
+				return
 			}
 
 		}

@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 16:02:29
+* @Last Modified time: 2015-09-23 07:19:40
  */
 
 package pilot
@@ -51,6 +51,7 @@ type Pilot struct {
 	inputChan     chan interface{}
 	alarmChan     chan interface{}
 	steeringChan  chan interface{}
+	shutdownChan  chan interface{}
 }
 
 type Controller interface {
@@ -86,9 +87,10 @@ func computeHeadingError(heading float64, gpsHeading float64) float64 {
 func New(controller Controller, bound float64) *Pilot {
 
 	return &Pilot{
-		leds:  make(map[string]bool),
-		bound: bound,
-		pid:   controller}
+		leds:         make(map[string]bool),
+		bound:        bound,
+		pid:          controller,
+		shutdownChan: make(chan interface{})}
 }
 
 func (p *Pilot) SetDashboardChan(c chan interface{}) {
@@ -244,6 +246,13 @@ func (p Pilot) Start() {
 				}
 			case <-time.After(conf.NoInputMessageTimeoutInSeconds * time.Second):
 				p.updateAfterTimeout()
+			case <-p.shutdownChan:
+				p.shutdown()
+				/////////////////////////
+				// Tell the world
+				/////////////////////////
+				p.tellTheWorld()
+				return
 			}
 
 			/////////////////////////

@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 21:45:21
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 12:03:34
+* @Last Modified time: 2015-09-23 07:44:22
  */
 
 package pilot
@@ -55,4 +55,15 @@ func (p *Pilot) enable() {
 func (p *Pilot) disable() {
 	p.enabled = false
 	p.alarm = UNRAISED
+}
+
+func (p Pilot) Shutdown() {
+	p.shutdownChan <- 1
+	<-p.shutdownChan
+}
+
+func (p *Pilot) shutdown() {
+	p.enabled = false
+	p.headingSet = false
+	close(p.shutdownChan)
 }

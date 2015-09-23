@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 15:42:21
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 20:28:58
+* @Last Modified time: 2015-09-23 07:44:53
  */
 
 package alarm
@@ -34,7 +34,8 @@ type Alarm struct {
 	alarmState   bool
 
 	// channels
-	inputChan chan interface{}
+	inputChan    chan interface{}
+	shutdownChan chan interface{}
 }
 
 type Enablable interface {
@@ -43,7 +44,7 @@ type Enablable interface {
 }
 
 func New(alarmHandler Enablable) *Alarm {
-	return &Alarm{alarmHandler: alarmHandler}
+	return &Alarm{alarmHandler: alarmHandler, shutdownChan: make(chan interface{})}
 }
 
 type message struct {
@@ -58,7 +59,7 @@ func (d *Alarm) SetInputChan(c chan interface{}) {
 	d.inputChan = c
 }
 
-func (d *Alarm) processAlarmState() {
+func (d Alarm) processAlarmState() {
 
 	alarm := d.alarmHandler
 	state := d.alarmState
@@ -77,7 +78,7 @@ func (d *Alarm) processAlarmState() {
 
 }
 
-func (d Alarm) processMessage(m message) {
+func (d *Alarm) processMessage(m message) {
 	// Update the state
 	d.alarmState = m.alarm
 
@@ -88,14 +89,21 @@ func (d Alarm) processMessage(m message) {
 // Shutdown sets all the state to down and notify the handlers
 func (d Alarm) Shutdown() {
 
+	d.shutdownChan <- 1
+	<-d.shutdownChan
+}
+
+func (d *Alarm) shutdown() {
 	d.alarmState = false
 
 	// Update the alarm
 	d.processAlarmState()
+
+	close(d.shutdownChan)
 }
 
 // Start the event loop of the Alarm component
-func (d Alarm) Start() {
+func (d *Alarm) Start() {
 
 	go func() {
 		for true {
@@ -105,7 +113,10 @@ func (d Alarm) Start() {
 				case message:
 					d.processMessage(m)
 				}
+			case <-d.shutdownChan:
+				d.shutdown()
 
+				return
 			}
 
 		}

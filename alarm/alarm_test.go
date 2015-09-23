@@ -18,12 +18,14 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 15:42:21
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-23 01:16:32
+* @Last Modified time: 2015-09-23 07:01:41
  */
 
 package alarm
 
 import (
+	"sync"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -56,7 +58,7 @@ var _ = Describe("Alarm", func() {
 	Describe("after start with no channels", func() {
 
 		It("should enable alarm on message telling so", func() {
-			By("receiving a message at true and processing it")
+
 			m := NewMessage(true)
 
 			alarm.processMessage(m.(message))
@@ -65,7 +67,7 @@ var _ = Describe("Alarm", func() {
 		})
 
 		It("should disable alarm on message telling so", func() {
-			By("receiving a message at false and processing it")
+
 			m := NewMessage(false)
 
 			alarm.processMessage(m.(message))
@@ -92,50 +94,53 @@ var _ = Describe("Alarm", func() {
 
 	Describe("after start with channels", func() {
 
-		Describe("With channels", func() {
+		It("should be enabled by a message at true", func() {
 
-			It("should be enabled by a message at true", func() {
+			Expect(handler.state).To(BeFalse())
+			m := NewMessage(true)
 
-				Expect(handler.state).To(BeFalse())
-				m := NewMessage(true)
+			c <- m
 
-				c <- m
+			Eventually(handler.state).Should(BeTrue())
+		})
 
-				Eventually(handler.state).Should(BeTrue())
-			})
+		It("should be disabled by a message at false", func() {
+			m := NewMessage(false)
 
-			It("should be disabled by a message at false", func() {
-				m := NewMessage(false)
+			c <- m
 
-				c <- m
+			Eventually(handler.state).Should(BeFalse())
+		})
 
-				Eventually(handler.state).Should(BeFalse())
-			})
+		It("shutdown should disable the alarm", func() {
 
-			It("shutdown should disable the alarm", func() {
+			m := NewMessage(true)
 
-				m := NewMessage(true)
+			c <- m
 
-				c <- m
+			Eventually(handler.state).Should(BeTrue())
 
-				Eventually(handler.state).Should(BeTrue())
-				alarm.Shutdown()
+			alarm.Shutdown()
 
-				Eventually(handler.state).Should(BeFalse())
-			})
+			Eventually(func() bool { return handler.state }).Should(BeFalse())
 		})
 	})
 })
 
 type testHandler struct {
+	mu    sync.Mutex // protects state
 	state bool
 }
 
 func (h *testHandler) Enable() error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.state = true
 	return nil
 }
 func (h *testHandler) Disable() error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.state = false
 	return nil
 }

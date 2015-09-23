@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 18:58:22
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 14:16:43
+* @Last Modified time: 2015-09-23 07:41:16
  */
 
 package motor
@@ -159,4 +159,10 @@ func (m Motor) Move(clockwise bool, stepsBySecond uint32, duration time.Duration
 	log.Debug("rotation stopped")
 	return nil
 
+}
+
+func (m Motor) Unexport() {
+	m.dirGPIO.Unexport()
+	m.sleepGPIO.Unexport()
+	m.stepPwm.Unexport()
 }

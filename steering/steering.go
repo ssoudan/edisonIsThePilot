@@ -9,7 +9,7 @@ of the License at
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or impliem. See the
 License for the specific language governing permissions and limitations
 under the License.
 */
@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 17:40:00
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 19:44:22
+* @Last Modified time: 2015-09-23 07:47:25
  */
 
 package steering
@@ -41,7 +41,8 @@ type Motor struct {
 	actionner Actionner
 
 	// channels
-	inputChan chan interface{}
+	inputChan    chan interface{}
+	shutdownChan chan interface{}
 }
 
 type Actionner interface {
@@ -51,7 +52,7 @@ type Actionner interface {
 }
 
 func New(actionner Actionner) *Motor {
-	return &Motor{actionner: actionner}
+	return &Motor{actionner: actionner, shutdownChan: make(chan interface{})}
 }
 
 type message struct {
@@ -62,8 +63,8 @@ func NewMessage(rotationInDegree float64) interface{} {
 	return message{rotationInDegree: rotationInDegree}
 }
 
-func (d *Motor) SetInputChan(c chan interface{}) {
-	d.inputChan = c
+func (m *Motor) SetInputChan(c chan interface{}) {
+	m.inputChan = c
 }
 
 func rotationInDegreeToMove(rotationInDegree float64) (clockwise bool, speed uint32, duration time.Duration) {
@@ -75,17 +76,17 @@ func rotationInDegreeToMove(rotationInDegree float64) (clockwise bool, speed uin
 	return
 }
 
-func (d *Motor) processMotorState(m message) {
+func (m *Motor) processMotorState(msg message) {
 
-	rotationInDegree := m.rotationInDegree
+	rotationInDegree := msg.rotationInDegree
 
 	if rotationInDegree != 0. {
-		d.actionner.Enable()
-		defer d.actionner.Disable()
+		m.actionner.Enable()
+		defer m.actionner.Disable()
 
 		clockwise, speed, duration := rotationInDegreeToMove(rotationInDegree)
 
-		err := d.actionner.Move(clockwise, speed, duration)
+		err := m.actionner.Move(clockwise, speed, duration)
 		if err != nil {
 			log.Error("Failed to move [clockwise=%v] for %v at %v", clockwise, duration, speed)
 		}
@@ -93,31 +94,39 @@ func (d *Motor) processMotorState(m message) {
 	}
 }
 
-func (d Motor) processMessage(m message) {
+func (m Motor) processMessage(msg message) {
+	// no state to update
 
 	// move
-	d.processMotorState(m)
+	m.processMotorState(msg)
 }
 
 // Shutdown sets all the state to down and notify the handlers
-func (d Motor) Shutdown() {
+func (m Motor) Shutdown() {
+	m.shutdownChan <- 1
+	<-m.shutdownChan
+}
 
+func (m Motor) shutdown() {
 	// disable the steering -- should not be Enabled()
-	d.actionner.Disable()
+	m.actionner.Disable()
+	close(m.shutdownChan)
 }
 
 // Start the event loop of the Motor component
-func (d Motor) Start() {
+func (m Motor) Start() {
 
 	go func() {
 		for true {
 			select {
-			case m := <-d.inputChan:
-				switch m := m.(type) {
+			case msg := <-m.inputChan:
+				switch msg := msg.(type) {
 				case message:
-					d.processMessage(m)
+					m.processMessage(msg)
 				}
-
+			case <-m.shutdownChan:
+				m.shutdown()
+				return
 			}
 
 		}
