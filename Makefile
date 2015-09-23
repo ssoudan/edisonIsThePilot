@@ -29,7 +29,7 @@ GOFMT=gofmt -w
 TOPLEVEL_PKG := github.com/ssoudan/edisonIsThePilot
 INT_LIST :=  #<-- Interface directories
 IMPL_LIST := conf control alarm dashboard pilot gps steering drivers/pwm drivers/gpio drivers/compass/hmc drivers/compass drivers/motor  infrastructure/logger  #<-- Implementation directories
-CMD_LIST := cmd/edisonIsThePilot cmd/motorControl #<-- Command directories
+CMD_LIST := cmd/edisonIsThePilot cmd/motorControl cmd/alarmControl #<-- Command directories
 
 # List building
 ALL_LIST = $(INT_LIST) $(IMPL_LIST) $(CMD_LIST)

@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-23 07:54:27
+* @Last Modified time: 2015-09-23 11:36:12
  */
 
 package main
@@ -48,6 +48,49 @@ import (
 var log = logger.Log("edisonIsThePilot")
 
 func main() {
+
+	////////////////////////////////////////
+	// a nice and delicate alarm
+	////////////////////////////////////////
+	alarmPwm := func(pin byte, pwmId byte) *pwm.Pwm {
+
+		// kill the process (via log.Fatal) in case we can't create the PWM
+		pwm, err := pwm.New(pwmId, pin)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if !pwm.IsExported() {
+			err = pwm.Export()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		pwm.Disable()
+
+		if err = pwm.SetPeriodAndDutyCycle(200*time.Millisecond, 0.5); err != nil {
+			log.Fatal(err)
+		}
+
+		if err = pwm.Enable(); err != nil {
+			log.Fatal(err)
+		}
+		log.Info("[AUTOTEST] alarm is ON")
+
+		time.Sleep(2 * time.Second)
+		if err = pwm.Disable(); err != nil {
+			log.Fatal(err)
+		}
+		log.Info("[AUTOTEST] alarm is OFF")
+
+		return pwm
+	}(conf.AlarmGpioPin, conf.AlarmGpioPWM)
+	defer alarmPwm.Unexport()
+
+	alarm := alarm.New(alarmPwm)
+	alarmChan := make(chan interface{})
+	alarm.SetInputChan(alarmChan)
 
 	////////////////////////////////////////
 	// a beautiful dashboard
@@ -114,49 +157,6 @@ func main() {
 	}()
 
 	////////////////////////////////////////
-	// a nice alarm
-	////////////////////////////////////////
-	alarmPwm := func(pin byte, pwmId byte) *pwm.Pwm {
-
-		// kill the process (via log.Fatal) in case we can't create the PWM
-		pwm, err := pwm.New(pwmId, pin)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if !pwm.IsExported() {
-			err = pwm.Export()
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		pwm.Disable()
-
-		if err = pwm.SetPeriodAndDutyCycle(200*time.Millisecond, 0.5); err != nil {
-			log.Fatal(err)
-		}
-
-		if err = pwm.Enable(); err != nil {
-			log.Fatal(err)
-		}
-		log.Info("[AUTOTEST] alarm is ON")
-
-		time.Sleep(2 * time.Second)
-		if err = pwm.Disable(); err != nil {
-			log.Fatal(err)
-		}
-		log.Info("[AUTOTEST] alarm is OFF")
-
-		return pwm
-	}(conf.AlarmGpioPin, conf.AlarmGpioPWM)
-	defer alarmPwm.Unexport()
-
-	alarm := alarm.New(alarmPwm)
-	alarmChan := make(chan interface{})
-	alarm.SetInputChan(alarmChan)
-
-	////////////////////////////////////////
 	// an astonishing steering
 	////////////////////////////////////////
 	motor := motor.New(
@@ -171,13 +171,13 @@ func main() {
 	steering.SetInputChan(steeringChan)
 
 	////////////////////////////////////////
-	// PID stuffs
+	// an amazing PID
 	////////////////////////////////////////
 	pidController := pidctrl.NewPIDController(conf.P, conf.I, conf.D)
 	pidController.SetOutputLimits(conf.MinPIDOutputLimits, conf.MaxPIDOutputLimits)
 
 	////////////////////////////////////////
-	// pilot stuffs
+	// a great pilot
 	////////////////////////////////////////
 	thePilot := pilot.New(pidController, conf.Bounds)
 	pilotChan := make(chan interface{})
@@ -187,7 +187,7 @@ func main() {
 	thePilot.SetSteeringChan(steeringChan)
 
 	////////////////////////////////////////
-	// input stuffs
+	// a surprising input
 	////////////////////////////////////////
 	switchGpio := func(pin byte) gpio.Gpio {
 
@@ -236,7 +236,7 @@ func main() {
 	// TODO(ssoudan) if the value of the switch at start is true, the trigger the alarm, we have rebooted while the pilot was enabled
 
 	////////////////////////////////////////
-	// gps stuffs
+	// a wonderful gps
 	////////////////////////////////////////
 	gps := gps.New(conf.GpsSerialPort)
 	gps.SetMessagesChan(pilotChan)
