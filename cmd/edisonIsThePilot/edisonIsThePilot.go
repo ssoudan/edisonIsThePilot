@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 14:17:33
+* @Last Modified time: 2015-09-24 15:31:39
  */
 
 package main
@@ -26,12 +26,8 @@ package main
 import (
 	"github.com/felixge/pidctrl"
 
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
-	// "github.com/ssoudan/edisonIsThePilot/compass/hmc"
 	"github.com/ssoudan/edisonIsThePilot/alarm"
 	"github.com/ssoudan/edisonIsThePilot/conf"
 	"github.com/ssoudan/edisonIsThePilot/control"
@@ -41,6 +37,7 @@ import (
 	"github.com/ssoudan/edisonIsThePilot/drivers/pwm"
 	"github.com/ssoudan/edisonIsThePilot/gps"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
+	"github.com/ssoudan/edisonIsThePilot/infrastructure/utils"
 	"github.com/ssoudan/edisonIsThePilot/pilot"
 	"github.com/ssoudan/edisonIsThePilot/steering"
 )
@@ -54,35 +51,64 @@ func main() {
 
 	log.Info("Starting -- version %s", Version)
 
+	panicChan := make(chan interface{})
+	defer func() {
+		if r := recover(); r != nil {
+			panicChan <- r
+		}
+	}()
+
+	go func() {
+		select {
+		case m := <-panicChan:
+
+			// kill the process (via log.Fatal) in case we can't create the PWM
+			if pwm, err := pwm.New(conf.AlarmGpioPWM, conf.AlarmGpioPin); err == nil {
+				if !pwm.IsExported() {
+					err = pwm.Export()
+					if err != nil {
+						log.Error("Failed to raise the alarm")
+					}
+				}
+
+				pwm.Enable()
+			} else {
+				log.Error("Failed to raise the alarm")
+			}
+
+			log.Fatalf("Version %v -- Received a panic error -- exiting: %v", Version, m)
+		}
+	}()
+
 	////////////////////////////////////////
 	// Init the IO
 	////////////////////////////////////////
 	// the LEDs
 	mapMessageToGPIO := func(message string, pin byte) gpio.Gpio {
 
-		// kill the process (via log.Fatal) in case we can't create the GPIO
+		// kill the process (via log.Panic -> recover -> panicChan -> go routine -> log.Fatal) in case we can't create the GPIO
 		err := gpio.EnableGPIO(pin)
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
 		var g = gpio.New(pin)
 		if !g.IsExported() {
 			err = g.Export()
 			if err != nil {
-				log.Fatal(err)
+				log.Panic(err)
 			}
 		}
 
 		err = g.SetDirection(gpio.OUT)
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
 		// Test Disabled and Enabled state for each LEDs
 		err = g.Disable()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
 		log.Info("[AUTOTEST] %s LED is ON", message)
@@ -90,7 +116,7 @@ func main() {
 
 		err = g.Enable()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
 		log.Info("[AUTOTEST] %s LED is OFF", message)
@@ -98,7 +124,7 @@ func main() {
 
 		err = g.Disable()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
 		return g
@@ -118,28 +144,28 @@ func main() {
 	// the input button
 	switchGpio := func(pin byte) gpio.Gpio {
 
-		// kill the process (via log.Fatal) in case we can't create the GPIO
+		// kill the process (via log.Panic) in case we can't create the GPIO
 		err := gpio.EnableGPIO(pin)
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
 		var g = gpio.New(pin)
 		if !g.IsExported() {
 			err = g.Export()
 			if err != nil {
-				log.Fatal(err)
+				log.Panic(err)
 			}
 		}
 
 		err = g.SetDirection(gpio.IN)
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
 		err = g.SetActiveLevel(gpio.ACTIVE_HIGH)
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
 		// Test we can read it and make we we don't go beyond this point until the switch is OFF
@@ -147,7 +173,7 @@ func main() {
 		// Since the alarm has not been initialized yet, after a reboot it will be ON.
 		for value, err := g.Value(); value; value, err = g.Value() {
 			if err != nil {
-				log.Fatal(err)
+				log.Panic(err)
 			}
 
 			log.Info("[AUTOTEST] current autopilot switch position is ON - switch it OFF to proceed.")
@@ -170,33 +196,33 @@ func main() {
 	// The alarm
 	alarmPwm := func(pin byte, pwmId byte) *pwm.Pwm {
 
-		// kill the process (via log.Fatal) in case we can't create the PWM
+		// kill the process (via log.Panic) in case we can't create the PWM
 		pwm, err := pwm.New(pwmId, pin)
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
 		if !pwm.IsExported() {
 			err = pwm.Export()
 			if err != nil {
-				log.Fatal(err)
+				log.Panic(err)
 			}
 		}
 
 		pwm.Disable()
 
 		if err = pwm.SetPeriodAndDutyCycle(200*time.Millisecond, 0.5); err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
 		if err = pwm.Enable(); err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 		log.Info("[AUTOTEST] alarm is ON")
 
 		time.Sleep(2 * time.Second)
 		if err = pwm.Disable(); err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 		log.Info("[AUTOTEST] alarm is OFF")
 
@@ -211,6 +237,7 @@ func main() {
 	alarm := alarm.New(alarmPwm)
 	alarmChan := make(chan interface{})
 	alarm.SetInputChan(alarmChan)
+	alarm.SetPanicChan(panicChan)
 
 	////////////////////////////////////////
 	// a beautiful dashboard
@@ -218,6 +245,7 @@ func main() {
 	dashboard := dashboard.New()
 	dashboardChan := make(chan interface{})
 	dashboard.SetInputChan(dashboardChan)
+	dashboard.SetPanicChan(panicChan)
 	for m, g := range dashboardGPIOs {
 		dashboard.RegisterMessageHandler(m, g)
 	}
@@ -228,6 +256,7 @@ func main() {
 	steering := steering.New(motor)
 	steeringChan := make(chan interface{})
 	steering.SetInputChan(steeringChan)
+	steering.SetPanicChan(panicChan)
 
 	////////////////////////////////////////
 	// an amazing PID
@@ -244,11 +273,13 @@ func main() {
 	thePilot.SetDashboardChan(dashboardChan)
 	thePilot.SetAlarmChan(alarmChan)
 	thePilot.SetSteeringChan(steeringChan)
+	thePilot.SetPanicChan(panicChan)
 
 	////////////////////////////////////////
 	// a surprising input
 	////////////////////////////////////////
 	control := control.New(switchGpio, thePilot)
+	control.SetPanicChan(panicChan)
 
 	////////////////////////////////////////
 	// a wonderful gps
@@ -256,6 +287,7 @@ func main() {
 	gps := gps.New(conf.GpsSerialPort)
 	gps.SetMessagesChan(pilotChan)
 	gps.SetErrorChan(pilotChan)
+	gps.SetPanicChan(panicChan)
 
 	gps.Start()
 	control.Start()
@@ -270,18 +302,9 @@ func main() {
 	defer thePilot.Shutdown()
 
 	// Wait until we receive a signal
-	waitForInterrupt()
-
-}
-
-func waitForInterrupt() {
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
-	select {
-	case <-sigChan:
+	utils.WaitForInterrupt(func() {
 		log.Info("Interrupted - exiting")
 		log.Info("Exiting -- version %v", Version)
-	}
-}
+	})
 
-// TODO(ssoudan) set alarm if exited under an error condition
+}

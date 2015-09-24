@@ -1,8 +1,24 @@
 /*
+Copyright 2015 Sebastien Soudan
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not
+use this file except in compliance with the License. You may obtain a copy
+of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+License for the specific language governing permissions and limitations
+under the License.
+*/
+
+/*
 * @Author: Sebastien Soudan
 * @Date:   2015-09-23 11:37:24
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-23 11:40:38
+* @Last Modified time: 2015-09-24 15:20:15
  */
 
 package main
@@ -19,6 +35,14 @@ import (
 var log = logger.Log("alarmControl")
 
 func main() {
+
+	panicChan := make(chan interface{})
+	go func() {
+		select {
+		case m := <-panicChan:
+			log.Fatal("Received a panic error - exiting: %v", m)
+		}
+	}()
 
 	////////////////////////////////////////
 	// a nice and delicate alarm
@@ -44,27 +68,24 @@ func main() {
 			log.Fatal(err)
 		}
 
-		if err = pwm.Enable(); err != nil {
-			log.Fatal(err)
-		}
-		log.Info("[AUTOTEST] alarm is ON")
-
-		time.Sleep(2 * time.Second)
-		if err = pwm.Disable(); err != nil {
-			log.Fatal(err)
-		}
-		log.Info("[AUTOTEST] alarm is OFF")
-
 		return pwm
 	}(conf.AlarmGpioPin, conf.AlarmGpioPWM)
-	defer alarmPwm.Unexport()
+	// defer alarmPwm.Unexport() // Don't do that it can disable the alarms for the autopilot program
 
 	alarm_ := alarm.New(alarmPwm)
 	alarmChan := make(chan interface{})
 	alarm_.SetInputChan(alarmChan)
+	alarm_.SetPanicChan(panicChan)
 
 	alarm_.Start()
 
 	alarmChan <- alarm.NewMessage(true)
+
+	for !alarm_.Enabled() {
+		log.Info("Waiting for the alarm to come")
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	alarm_.Shutdown()
 
 }

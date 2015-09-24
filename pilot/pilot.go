@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-23 07:19:40
+* @Last Modified time: 2015-09-24 14:59:04
  */
 
 package pilot
@@ -52,6 +52,7 @@ type Pilot struct {
 	alarmChan     chan interface{}
 	steeringChan  chan interface{}
 	shutdownChan  chan interface{}
+	panicChan     chan interface{}
 }
 
 type Controller interface {
@@ -107,6 +108,10 @@ func (p *Pilot) SetAlarmChan(c chan interface{}) {
 
 func (p *Pilot) SetSteeringChan(c chan interface{}) {
 	p.steeringChan = c
+}
+
+func (p *Pilot) SetPanicChan(c chan interface{}) {
+	p.panicChan = c
 }
 
 func (p *Pilot) updateFixStatus(fix FixStatus) {
@@ -226,7 +231,14 @@ func (p *Pilot) updateAfterError() {
 
 // Start the event loop of the Pilot component
 func (p Pilot) Start() {
+
 	go func() {
+
+		defer func() {
+			if r := recover(); r != nil {
+				p.panicChan <- r
+			}
+		}()
 
 		for {
 			select {
@@ -241,6 +253,7 @@ func (p Pilot) Start() {
 				case DisableAction:
 					p.disable()
 				case error:
+					// TODO(ssoudan) is that enough?
 					log.Error("Received an error: %v", m)
 					p.updateAfterError()
 				}

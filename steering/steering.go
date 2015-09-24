@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 17:40:00
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 13:12:37
+* @Last Modified time: 2015-09-24 15:36:08
  */
 
 package steering
@@ -43,6 +43,7 @@ type Motor struct {
 	// channels
 	inputChan    chan interface{}
 	shutdownChan chan interface{}
+	panicChan    chan interface{}
 }
 
 type Actionner interface {
@@ -67,6 +68,10 @@ func (m *Motor) SetInputChan(c chan interface{}) {
 	m.inputChan = c
 }
 
+func (m *Motor) SetPanicChan(c chan interface{}) {
+	m.panicChan = c
+}
+
 func rotationInDegreeToMove(rotationInDegree float64) (clockwise bool, speed uint32, duration time.Duration) {
 	clockwise = rotationInDegree > 0.
 	speed = uint32(rotationSpeedInStepPerSeconds)
@@ -88,7 +93,7 @@ func (m *Motor) processMotorState(msg message) {
 
 		err := m.actionner.Move(clockwise, speed, duration)
 		if err != nil {
-			log.Error("Failed to move [clockwise=%v] for %v at %v", clockwise, duration, speed)
+			log.Panicf("Failed to move [clockwise=%v] for %v at %v", clockwise, duration, speed)
 		}
 
 	}
@@ -117,6 +122,13 @@ func (m Motor) shutdown() {
 func (m Motor) Start() {
 
 	go func() {
+
+		defer func() {
+			if r := recover(); r != nil {
+				m.panicChan <- r
+			}
+		}()
+
 		for {
 			select {
 			case msg := <-m.inputChan:

@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 15:42:21
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-23 07:01:41
+* @Last Modified time: 2015-09-24 15:13:14
  */
 
 package alarm
@@ -112,7 +112,7 @@ var _ = Describe("Alarm", func() {
 			Eventually(handler.state).Should(BeFalse())
 		})
 
-		It("shutdown should disable the alarm", func() {
+		It("shutdown should leave the alarm untouched - on", func() {
 
 			m := NewMessage(true)
 
@@ -122,7 +122,20 @@ var _ = Describe("Alarm", func() {
 
 			alarm.Shutdown()
 
-			Eventually(func() bool { return handler.state }).Should(BeFalse())
+			Consistently(func() bool { return handler.state }).Should(BeTrue())
+		})
+
+		It("shutdown should leave the alarm untouched - off", func() {
+
+			m := NewMessage(false)
+
+			c <- m
+
+			Eventually(handler.state).Should(BeFalse())
+
+			alarm.Shutdown()
+
+			Consistently(func() bool { return handler.state }).Should(BeFalse())
 		})
 	})
 })

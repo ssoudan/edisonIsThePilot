@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:24:54
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 14:13:11
+* @Last Modified time: 2015-09-24 14:58:11
  */
 
 package main
@@ -41,6 +41,7 @@ func step(motor *motor.Motor, clockwise bool, stepsBySecond uint32, duration tim
 }
 
 func main() {
+
 	motor := motor.New(
 		conf.MotorStepPin,
 		conf.MotorStepPwm,

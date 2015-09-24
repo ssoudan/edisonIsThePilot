@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 17:13:41
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 13:12:42
+* @Last Modified time: 2015-09-24 15:35:59
  */
 
 package gps
@@ -45,6 +45,7 @@ type GPS struct {
 	// channels
 	messagesChan chan interface{}
 	errorChan    chan interface{}
+	panicChan    chan interface{}
 }
 
 // New creates a new GPS component
@@ -60,13 +61,16 @@ func (g *GPS) SetErrorChan(c chan interface{}) {
 	g.errorChan = c
 }
 
+func (g *GPS) SetPanicChan(c chan interface{}) {
+	g.panicChan = c
+}
+
 func (g GPS) doReceiveGPSMessages() {
 	c := &serial.Config{Name: g.deviceName, Baud: g.baud}
 
 	s, err := serial.OpenPort(c)
 	if err != nil {
-		log.Error("Failed to open serial port: %v", err)
-		g.errorChan <- err
+		log.Panicf("Failed to open serial port: %v", err)
 
 		return
 	}
@@ -131,6 +135,11 @@ func (g GPS) doReceiveGPSMessages() {
 func (g GPS) Start() {
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				g.panicChan <- r
+			}
+		}()
 
 		for {
 			g.doReceiveGPSMessages()

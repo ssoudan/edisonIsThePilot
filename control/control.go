@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 11:55:49
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 13:12:42
+* @Last Modified time: 2015-09-24 15:35:01
  */
 
 package control
@@ -39,6 +39,7 @@ type Control struct {
 	// channels
 	pilotChan    chan interface{}
 	shutdownChan chan interface{}
+	panicChan    chan interface{}
 }
 
 type Enablable interface {
@@ -54,12 +55,16 @@ func New(controlHandler Readable, pilot Enablable) *Control {
 	return &Control{controlHandler: controlHandler, pilot: pilot, shutdownChan: make(chan interface{})}
 }
 
+func (c *Control) SetPanicChan(p chan interface{}) {
+	c.panicChan = p
+}
+
 func (c *Control) updateControlState() error {
 
 	control := c.controlHandler
 	state, err := control.Value()
 	if err != nil {
-		log.Error("Failed to read switch value: %v", err)
+		log.Panicf("Failed to read switch value: %v", err)
 		return err
 	}
 
@@ -97,12 +102,18 @@ func (c Control) shutdown() {
 func (c Control) Start() {
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				c.panicChan <- r
+			}
+		}()
+
 		for {
 			select {
 			case <-time.After(100 * time.Millisecond):
 				err := c.updateControlState()
 				if err != nil {
-					log.Error("Error while updating control: %v", err)
+					log.Panicf("Error while updating control: %v", err)
 				}
 			case <-c.shutdownChan:
 				c.shutdown()

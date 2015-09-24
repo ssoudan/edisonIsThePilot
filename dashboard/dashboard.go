@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 16:30:19
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 13:12:42
+* @Last Modified time: 2015-09-24 15:35:36
  */
 
 package dashboard
@@ -44,6 +44,7 @@ type Dashboard struct {
 	// channels
 	inputChan    chan interface{}
 	shutdownChan chan interface{}
+	panicChan    chan interface{}
 }
 
 type Enablable interface {
@@ -75,6 +76,10 @@ func (d *Dashboard) SetInputChan(c chan interface{}) {
 	d.inputChan = c
 }
 
+func (d *Dashboard) SetPanicChan(c chan interface{}) {
+	d.panicChan = c
+}
+
 func (d Dashboard) processLedState() {
 	for led, state := range d.leds {
 		gpio, ok := d.ledHandler[led]
@@ -82,14 +87,12 @@ func (d Dashboard) processLedState() {
 			if state {
 				err := gpio.Enable()
 				if err != nil {
-					log.Error("Failed to change led state for [%s = %v]: %v", led, state, err)
-					// TODO(ssoudan) probably a case for an alarm
+					log.Panicf("Failed to change led state for [%s = %v]: %v", led, state, err)
 				}
 			} else {
 				err := gpio.Disable()
 				if err != nil {
-					log.Error("Failed to change led state for [%s = %v]: %v", led, state, err)
-					// TODO(ssoudan) probably a case for an alarm
+					log.Panicf("Failed to change led state for [%s = %v]: %v", led, state, err)
 				}
 			}
 		} else {
@@ -130,6 +133,12 @@ func (d Dashboard) shutdown() {
 func (d Dashboard) Start() {
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				d.panicChan <- r
+			}
+		}()
+
 		for {
 			select {
 			case m := <-d.inputChan:

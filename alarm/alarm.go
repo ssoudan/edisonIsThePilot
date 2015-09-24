@@ -18,12 +18,14 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 15:42:21
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 13:12:42
+* @Last Modified time: 2015-09-24 15:35:16
  */
 
 package alarm
 
 import (
+	"sync"
+
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 )
 
@@ -31,11 +33,14 @@ var log = logger.Log("alarm")
 
 type Alarm struct {
 	alarmHandler Enablable
-	alarmState   bool
+
+	mu         sync.RWMutex
+	alarmState bool // protected by mu
 
 	// channels
 	inputChan    chan interface{}
 	shutdownChan chan interface{}
+	panicChan    chan interface{}
 }
 
 type Enablable interface {
@@ -59,7 +64,19 @@ func (d *Alarm) SetInputChan(c chan interface{}) {
 	d.inputChan = c
 }
 
+func (d *Alarm) SetPanicChan(c chan interface{}) {
+	d.panicChan = c
+}
+
+func (d *Alarm) Enabled() bool {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return d.alarmState
+}
+
 func (d Alarm) processAlarmState() {
+
+	// NOTE: already hold the WLock
 
 	alarm := d.alarmHandler
 	state := d.alarmState
@@ -67,12 +84,12 @@ func (d Alarm) processAlarmState() {
 	if state {
 		err := alarm.Enable()
 		if err != nil {
-			log.Error("Failed to change alarm state for [%s = %v]: %v", state, err)
+			log.Panicf("Failed to change alarm state to %v: %v", state, err)
 		}
 	} else {
 		err := alarm.Disable()
 		if err != nil {
-			log.Error("Failed to change alarm state for [%s = %v]: %v", state, err)
+			log.Panicf("Failed to change alarm state to %v: %v", state, err)
 		}
 	}
 
@@ -80,6 +97,8 @@ func (d Alarm) processAlarmState() {
 
 func (d *Alarm) processMessage(m message) {
 	// Update the state
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	d.alarmState = m.alarm
 
 	// Update the alarm
@@ -94,7 +113,6 @@ func (d Alarm) Shutdown() {
 }
 
 func (d *Alarm) shutdown() {
-	d.alarmState = false
 
 	// Update the alarm
 	d.processAlarmState()
@@ -106,6 +124,13 @@ func (d *Alarm) shutdown() {
 func (d *Alarm) Start() {
 
 	go func() {
+
+		defer func() {
+			if r := recover(); r != nil {
+				d.panicChan <- r
+			}
+		}()
+
 		for {
 			select {
 			case m := <-d.inputChan:
