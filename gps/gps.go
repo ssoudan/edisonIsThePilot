@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 17:13:41
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 14:22:42
+* @Last Modified time: 2015-09-24 13:12:42
  */
 
 package gps
@@ -82,7 +82,7 @@ func (g GPS) doReceiveGPSMessages() {
 		}
 	}()
 
-	for true {
+	for {
 		str, err := bufferedReader.ReadString('\n')
 		// log.Debug("[%s]", str)
 		if err != nil {
@@ -132,7 +132,7 @@ func (g GPS) Start() {
 
 	go func() {
 
-		for true {
+		for {
 			g.doReceiveGPSMessages()
 			time.Sleep(1 * time.Second)
 		}

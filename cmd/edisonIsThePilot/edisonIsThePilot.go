@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-23 11:36:12
+* @Last Modified time: 2015-09-24 14:17:33
  */
 
 package main
@@ -47,57 +47,17 @@ import (
 
 var log = logger.Log("edisonIsThePilot")
 
+var Version = "unknown"
+
 func main() {
+	// TODO(ssoudan) need to make sure there is a single process running! --> a socket could do the job
+
+	log.Info("Starting -- version %s", Version)
 
 	////////////////////////////////////////
-	// a nice and delicate alarm
+	// Init the IO
 	////////////////////////////////////////
-	alarmPwm := func(pin byte, pwmId byte) *pwm.Pwm {
-
-		// kill the process (via log.Fatal) in case we can't create the PWM
-		pwm, err := pwm.New(pwmId, pin)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if !pwm.IsExported() {
-			err = pwm.Export()
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		pwm.Disable()
-
-		if err = pwm.SetPeriodAndDutyCycle(200*time.Millisecond, 0.5); err != nil {
-			log.Fatal(err)
-		}
-
-		if err = pwm.Enable(); err != nil {
-			log.Fatal(err)
-		}
-		log.Info("[AUTOTEST] alarm is ON")
-
-		time.Sleep(2 * time.Second)
-		if err = pwm.Disable(); err != nil {
-			log.Fatal(err)
-		}
-		log.Info("[AUTOTEST] alarm is OFF")
-
-		return pwm
-	}(conf.AlarmGpioPin, conf.AlarmGpioPWM)
-	defer alarmPwm.Unexport()
-
-	alarm := alarm.New(alarmPwm)
-	alarmChan := make(chan interface{})
-	alarm.SetInputChan(alarmChan)
-
-	////////////////////////////////////////
-	// a beautiful dashboard
-	////////////////////////////////////////
-	dashboard := dashboard.New()
-	dashboardChan := make(chan interface{})
-	dashboard.SetInputChan(dashboardChan)
+	// the LEDs
 	mapMessageToGPIO := func(message string, pin byte) gpio.Gpio {
 
 		// kill the process (via log.Fatal) in case we can't create the GPIO
@@ -143,11 +103,10 @@ func main() {
 
 		return g
 	}
-	dashboardGPIOs := make([]gpio.Gpio, len(conf.MessageToPin))
+	dashboardGPIOs := make(map[string]gpio.Gpio, len(conf.MessageToPin))
 	for k, v := range conf.MessageToPin {
 		g := mapMessageToGPIO(k, v)
-		dashboardGPIOs = append(dashboardGPIOs, g)
-		dashboard.RegisterMessageHandler(k, g)
+		dashboardGPIOs[k] = g
 	}
 	defer func() {
 		for _, g := range dashboardGPIOs {
@@ -156,39 +115,7 @@ func main() {
 		}
 	}()
 
-	////////////////////////////////////////
-	// an astonishing steering
-	////////////////////////////////////////
-	motor := motor.New(
-		conf.MotorStepPin,
-		conf.MotorStepPwm,
-		conf.MotorDirPin,
-		conf.MotorSleepPin)
-	defer motor.Unexport()
-
-	steering := steering.New(motor)
-	steeringChan := make(chan interface{})
-	steering.SetInputChan(steeringChan)
-
-	////////////////////////////////////////
-	// an amazing PID
-	////////////////////////////////////////
-	pidController := pidctrl.NewPIDController(conf.P, conf.I, conf.D)
-	pidController.SetOutputLimits(conf.MinPIDOutputLimits, conf.MaxPIDOutputLimits)
-
-	////////////////////////////////////////
-	// a great pilot
-	////////////////////////////////////////
-	thePilot := pilot.New(pidController, conf.Bounds)
-	pilotChan := make(chan interface{})
-	thePilot.SetInputChan(pilotChan)
-	thePilot.SetDashboardChan(dashboardChan)
-	thePilot.SetAlarmChan(alarmChan)
-	thePilot.SetSteeringChan(steeringChan)
-
-	////////////////////////////////////////
-	// a surprising input
-	////////////////////////////////////////
+	// the input button
 	switchGpio := func(pin byte) gpio.Gpio {
 
 		// kill the process (via log.Fatal) in case we can't create the GPIO
@@ -215,25 +142,113 @@ func main() {
 			log.Fatal(err)
 		}
 
-		// Test we can read it
-		value, err := g.Value()
-		if err != nil {
-			log.Fatal(err)
-		}
+		// Test we can read it and make we we don't go beyond this point until the switch is OFF
+		// to prevent the autopilot to be re-enabled when the system restart.
+		// Since the alarm has not been initialized yet, after a reboot it will be ON.
+		for value, err := g.Value(); value; value, err = g.Value() {
+			if err != nil {
+				log.Fatal(err)
+			}
 
-		switchState := "OFF"
-		if value {
-			switchState = "ON"
-		}
+			log.Info("[AUTOTEST] current autopilot switch position is ON - switch it OFF to proceed.")
 
-		log.Info("[AUTOTEST] current switch position is %s", switchState)
+			time.Sleep(200 * time.Millisecond)
+		}
 
 		return g
 	}(conf.SwitchGpioPin)
 	defer switchGpio.Unexport()
-	control := control.New(switchGpio, thePilot)
 
-	// TODO(ssoudan) if the value of the switch at start is true, the trigger the alarm, we have rebooted while the pilot was enabled
+	// The motor
+	motor := motor.New(
+		conf.MotorStepPin,
+		conf.MotorStepPwm,
+		conf.MotorDirPin,
+		conf.MotorSleepPin)
+	defer motor.Unexport()
+
+	// The alarm
+	alarmPwm := func(pin byte, pwmId byte) *pwm.Pwm {
+
+		// kill the process (via log.Fatal) in case we can't create the PWM
+		pwm, err := pwm.New(pwmId, pin)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if !pwm.IsExported() {
+			err = pwm.Export()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		pwm.Disable()
+
+		if err = pwm.SetPeriodAndDutyCycle(200*time.Millisecond, 0.5); err != nil {
+			log.Fatal(err)
+		}
+
+		if err = pwm.Enable(); err != nil {
+			log.Fatal(err)
+		}
+		log.Info("[AUTOTEST] alarm is ON")
+
+		time.Sleep(2 * time.Second)
+		if err = pwm.Disable(); err != nil {
+			log.Fatal(err)
+		}
+		log.Info("[AUTOTEST] alarm is OFF")
+
+		return pwm
+	}(conf.AlarmGpioPin, conf.AlarmGpioPWM)
+	defer alarmPwm.Unexport()
+
+	////////////////////////////////////////
+	// a nice and delicate alarm
+	////////////////////////////////////////
+
+	alarm := alarm.New(alarmPwm)
+	alarmChan := make(chan interface{})
+	alarm.SetInputChan(alarmChan)
+
+	////////////////////////////////////////
+	// a beautiful dashboard
+	////////////////////////////////////////
+	dashboard := dashboard.New()
+	dashboardChan := make(chan interface{})
+	dashboard.SetInputChan(dashboardChan)
+	for m, g := range dashboardGPIOs {
+		dashboard.RegisterMessageHandler(m, g)
+	}
+
+	////////////////////////////////////////
+	// an astonishing steering
+	////////////////////////////////////////
+	steering := steering.New(motor)
+	steeringChan := make(chan interface{})
+	steering.SetInputChan(steeringChan)
+
+	////////////////////////////////////////
+	// an amazing PID
+	////////////////////////////////////////
+	pidController := pidctrl.NewPIDController(conf.P, conf.I, conf.D)
+	pidController.SetOutputLimits(conf.MinPIDOutputLimits, conf.MaxPIDOutputLimits)
+
+	////////////////////////////////////////
+	// a great pilot
+	////////////////////////////////////////
+	thePilot := pilot.New(pidController, conf.Bounds)
+	pilotChan := make(chan interface{})
+	thePilot.SetInputChan(pilotChan)
+	thePilot.SetDashboardChan(dashboardChan)
+	thePilot.SetAlarmChan(alarmChan)
+	thePilot.SetSteeringChan(steeringChan)
+
+	////////////////////////////////////////
+	// a surprising input
+	////////////////////////////////////////
+	control := control.New(switchGpio, thePilot)
 
 	////////////////////////////////////////
 	// a wonderful gps
@@ -265,6 +280,7 @@ func waitForInterrupt() {
 	select {
 	case <-sigChan:
 		log.Info("Interrupted - exiting")
+		log.Info("Exiting -- version %v", Version)
 	}
 }
 

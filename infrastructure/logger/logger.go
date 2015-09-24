@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-03-31 21:34:39
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-23 13:18:39
+* @Last Modified time: 2015-09-24 14:21:04
  */
 
 package logger
@@ -26,13 +26,7 @@ package logger
 import (
 	"github.com/op/go-logging"
 
-	"fmt"
 	"os"
-)
-
-const (
-	logFilename = "/var/log/edisonIsThePilot.log"
-	maxSize     = 40 * 1024 * 1024 // 40MB
 )
 
 func Log(name string) *logging.Logger {
@@ -52,26 +46,6 @@ func init() {
 	backendLeveled := logging.AddModuleLevel(backendFormatter)
 	backendLeveled.SetLevel(logging.DEBUG, "")
 
-	format := logging.MustStringFormatter(
-		"%{time:15:04:05.000} %{level:-6s} [%{module}] %{shortfunc:.10s} %{id:03x} %{message}",
-	)
-
-	rotatingWriter := New(logFilename, maxSize)
-	if rotatingWriter == nil {
-		fmt.Fprintf(os.Stderr, "Failed to open log file: %s - writing to stderr only.\n", logFilename)
-		// Set the backends to be used.
-		logging.SetBackend(backendLeveled)
-		return
-	}
-
-	rotatingBackend := logging.NewLogBackend(rotatingWriter, "", 0)
-
-	rotatingBackendFormatter := logging.NewBackendFormatter(rotatingBackend, format)
-
-	// Only errors and more severe messages should be sent to backend1
-	rotatingBackendLeveled := logging.AddModuleLevel(rotatingBackendFormatter)
-	rotatingBackendLeveled.SetLevel(logging.INFO, "")
-
-	// Set the backends to be used.
-	logging.SetBackend(backendLeveled, rotatingBackendLeveled)
+	logging.SetBackend(backendLeveled)
+	return
 }

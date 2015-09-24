@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 16:30:19
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-23 07:46:36
+* @Last Modified time: 2015-09-24 13:12:42
  */
 
 package dashboard
@@ -130,7 +130,7 @@ func (d Dashboard) shutdown() {
 func (d Dashboard) Start() {
 
 	go func() {
-		for true {
+		for {
 			select {
 			case m := <-d.inputChan:
 				switch m := m.(type) {

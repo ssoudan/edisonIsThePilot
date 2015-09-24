@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 11:55:49
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-23 07:46:08
+* @Last Modified time: 2015-09-24 13:12:42
  */
 
 package control
@@ -97,7 +97,7 @@ func (c Control) shutdown() {
 func (c Control) Start() {
 
 	go func() {
-		for true {
+		for {
 			select {
 			case <-time.After(100 * time.Millisecond):
 				err := c.updateControlState()

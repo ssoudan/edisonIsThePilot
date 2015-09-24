@@ -15,10 +15,14 @@
 #  Blog post on it: http://joneisen.me/post/25503842796
 #
 FLAGS=GOARCH=386 GOOS=linux
+GITID=$(shell git rev-parse --short HEAD)
+
+SSH=ssh -o StrictHostKeyChecking=no root@edison.local.
+SCP=scp -o StrictHostKeyChecking=no
 
 # Go parameters
 GOCMD=$(FLAGS) go
-GOBUILD=$(GOCMD) build
+GOBUILD=$(GOCMD) build -ldflags "-X main.Version='$(GITID)'" 
 GOCLEAN=$(GOCMD) clean
 GOINSTALL=$(GOCMD) install
 GOTEST=go test -cover
@@ -51,6 +55,13 @@ install: $(INSTALL_LIST)
 test: $(TEST_LIST)
 iref: $(IREF_LIST)
 fmt: $(FMT_LIST)
+deploy: build test
+	$(SSH) systemctl stop edisonIsThePilot
+	sleep 3
+	$(SCP) edisonIsThePilot motorControl alarmControl edisonIsThePilot.service root@edison.local.:
+	$(SSH) cp edisonIsThePilot.service /lib/systemd/system
+	$(SSH) systemctl daemon-reload
+	$(SSH) systemctl start edisonIsThePilot
 
 $(BUILD_LIST): %_build: %_fmt %_iref
 	$(GOBUILD) $(TOPLEVEL_PKG)/$*

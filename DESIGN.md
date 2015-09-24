@@ -333,14 +333,26 @@ It reads on the input channels, does what it has to do and send messages to anot
 
 ##### Integration with the OS boot
 At boot the alarm is on until the edisonIsThePilot is started.
-rc.local starts it with a '/root/edisonIsThePilot 2> /dev/null ; reboot' so when it stops, the edison is restarted.
+For that we will use systemd:
+
+    # cp edisonIsThePilot.service /lib/systemd/system/
+    # systemctl enable edisonIsThePilot
+
+To check the status of the service: 
+
+    # systemctl status edisonIsThePilot -l
 
 ##### Integration with the OS watchdog
 <!-- TODO(ssoudan) integration with watchdog -->
 
 #### Log rotation
-`edisonIsThePilot` writes both to stderr and '/var/log/edisonIsThePilot.log'. When the program is started or when the size of the file gets greater than 40MB (check performed every `logger.maxWriteCountWithoutCheck` writes), 
-the file is rotated to /var/log/edisonIsThePilot.log.old (previous edisonIsThePilot.log.old is deleted) and a new '/var/log/edisonIsThePilot.log' is created.
+<!-- `edisonIsThePilot` writes both to stderr and '/var/log/edisonIsThePilot.log'. When the program is started or when the size of the file gets greater than 40MB (check performed every `logger.maxWriteCountWithoutCheck` writes), 
+the file is rotated to /var/log/edisonIsThePilot.log.old (previous edisonIsThePilot.log.old is deleted) and a new '/var/log/edisonIsThePilot.log' is created. -->
+Logs are managed by journalctl.
+
+They can be watched with: 
+
+    # journalctl -u edisonIsThePilot
 
 #### 3.4.7 Mechanical integration
 

@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 15:42:21
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-23 07:44:53
+* @Last Modified time: 2015-09-24 13:12:42
  */
 
 package alarm
@@ -106,7 +106,7 @@ func (d *Alarm) shutdown() {
 func (d *Alarm) Start() {
 
 	go func() {
-		for true {
+		for {
 			select {
 			case m := <-d.inputChan:
 				switch m := m.(type) {

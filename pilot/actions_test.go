@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 21:48:32
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 14:04:17
+* @Last Modified time: 2015-09-24 13:12:42
  */
 
 package pilot
@@ -35,7 +35,7 @@ func TestEnableDisable(t *testing.T) {
 	c := make(chan interface{})
 
 	go func() {
-		for true {
+		for {
 			<-c
 		}
 	}()

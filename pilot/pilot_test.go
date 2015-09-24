@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 14:04:58
+* @Last Modified time: 2015-09-24 13:12:38
  */
 
 package pilot
@@ -93,7 +93,7 @@ func TestThatTellTheWorldPropagatesTheAlarmState(t *testing.T) {
 
 	// This is required as we are likely to send messages on the dashboard chan too
 	go func() {
-		for true {
+		for {
 			<-d
 		}
 	}()
@@ -134,7 +134,7 @@ func TestThatHeadingIsSetWithFirstGPSHeadingAfterItHasBeenEnabled(t *testing.T) 
 	c := make(chan interface{})
 
 	go func() {
-		for true {
+		for {
 			<-c
 		}
 	}()
@@ -174,7 +174,7 @@ func TestThatPIDControllerIsUpdatedWhenThePilotIsEnabled(t *testing.T) {
 	c := make(chan interface{})
 
 	go func() {
-		for true {
+		for {
 			<-c
 		}
 	}()
@@ -243,7 +243,7 @@ func TestThatTimeoutRaiseTheAlarm(t *testing.T) {
 	c := make(chan interface{})
 
 	go func() {
-		for true {
+		for {
 			<-c
 		}
 	}()
@@ -289,7 +289,7 @@ func TestThatOutOfBoundsGPSInputRaisesAnAlarm(t *testing.T) {
 	c := make(chan interface{})
 
 	go func() {
-		for true {
+		for {
 			<-c
 		}
 	}()

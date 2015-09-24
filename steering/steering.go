@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 17:40:00
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-23 07:47:25
+* @Last Modified time: 2015-09-24 13:12:37
  */
 
 package steering
@@ -117,7 +117,7 @@ func (m Motor) shutdown() {
 func (m Motor) Start() {
 
 	go func() {
-		for true {
+		for {
 			select {
 			case msg := <-m.inputChan:
 				switch msg := msg.(type) {
