@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 18:58:22
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 15:35:45
+* @Last Modified time: 2015-09-24 17:37:16
  */
 
 package motor
@@ -105,6 +105,10 @@ func (m Motor) Disable() error {
 }
 
 func (m Motor) Move(clockwise bool, stepsBySecond uint32, duration time.Duration) error {
+	if stepsBySecond == 0 || duration == 0 {
+		return nil
+	}
+
 	var err error
 	if clockwise {
 		err = m.dirGPIO.Enable()
@@ -156,7 +160,6 @@ func (m Motor) Move(clockwise bool, stepsBySecond uint32, duration time.Duration
 		return err
 	}
 
-	log.Debug("rotation stopped")
 	return nil
 
 }
