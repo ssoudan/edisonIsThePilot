@@ -18,13 +18,14 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 18:47:13
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-21 18:54:22
+* @Last Modified time: 2015-09-24 17:25:31
  */
 
 package steering
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -46,5 +47,14 @@ func TestThatSpeedIsConstant(t *testing.T) {
 	_, speed2, _ := rotationInDegreeToMove(140)
 
 	assert.EqualValues(t, speed1, speed2, "speed is contant")
+
+}
+
+func TestThatNothingMovesAtNullSpeed(t *testing.T) {
+	clockwise, _, duration := rotationInDegreeToMove(0)
+
+	assert.EqualValues(t, false, clockwise, "supposed to be clockwise")
+
+	assert.EqualValues(t, time.Duration(0), duration, "supposed to be clockwise")
 
 }

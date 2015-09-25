@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 16:30:19
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 13:14:47
+* @Last Modified time: 2015-09-24 15:35:36
  */
 
 package dashboard
@@ -42,7 +42,9 @@ type Dashboard struct {
 	ledHandler map[string]Enablable
 
 	// channels
-	inputChan chan interface{}
+	inputChan    chan interface{}
+	shutdownChan chan interface{}
+	panicChan    chan interface{}
 }
 
 type Enablable interface {
@@ -52,8 +54,9 @@ type Enablable interface {
 
 func New() *Dashboard {
 	return &Dashboard{
-		leds:       make(map[string]bool),
-		ledHandler: make(map[string]Enablable),
+		leds:         make(map[string]bool),
+		ledHandler:   make(map[string]Enablable),
+		shutdownChan: make(chan interface{}),
 	}
 }
 
@@ -73,21 +76,23 @@ func (d *Dashboard) SetInputChan(c chan interface{}) {
 	d.inputChan = c
 }
 
-func (d *Dashboard) processLedState() {
+func (d *Dashboard) SetPanicChan(c chan interface{}) {
+	d.panicChan = c
+}
+
+func (d Dashboard) processLedState() {
 	for led, state := range d.leds {
 		gpio, ok := d.ledHandler[led]
 		if ok {
 			if state {
 				err := gpio.Enable()
 				if err != nil {
-					log.Error("Failed to change led state for [%s = %v]: %v", led, state, err)
-					// TODO(ssoudan) probably a case for an alarm
+					log.Panicf("Failed to change led state for [%s = %v]: %v", led, state, err)
 				}
 			} else {
 				err := gpio.Disable()
 				if err != nil {
-					log.Error("Failed to change led state for [%s = %v]: %v", led, state, err)
-					// TODO(ssoudan) probably a case for an alarm
+					log.Panicf("Failed to change led state for [%s = %v]: %v", led, state, err)
 				}
 			}
 		} else {
@@ -109,25 +114,41 @@ func (d Dashboard) processMessage(m message) {
 
 // Shutdown sets all the state to down and notify the handlers
 func (d Dashboard) Shutdown() {
+	d.shutdownChan <- 1
+	<-d.shutdownChan
+}
+
+func (d Dashboard) shutdown() {
 	for k, _ := range d.leds {
 		d.leds[k] = false
 	}
 
 	// Update the LEDs
 	d.processLedState()
+
+	close(d.shutdownChan)
 }
 
 // Start the event loop of the Dashboard component
 func (d Dashboard) Start() {
 
 	go func() {
-		for true {
+		defer func() {
+			if r := recover(); r != nil {
+				d.panicChan <- r
+			}
+		}()
+
+		for {
 			select {
 			case m := <-d.inputChan:
 				switch m := m.(type) {
 				case message:
 					d.processMessage(m)
 				}
+			case <-d.shutdownChan:
+				d.shutdown()
+				return
 			}
 
 		}

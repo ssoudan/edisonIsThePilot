@@ -1,0 +1,16 @@
+[Unit]
+Description=Edison Is The Pilot
+After=rc-local.service
+Before=systemd-user-sessions.service
+ 
+[Service]
+Type=simple
+RemainAfterExit=false
+ExecStart=/home/root/edisonIsThePilot
+Environment="HOME=/home/root"
+WorkingDirectory=/home/root/
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

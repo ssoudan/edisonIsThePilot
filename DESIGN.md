@@ -1,7 +1,8 @@
 
 # Autopilot Design
 
-<a href="mailto:sebastien.soudan@gmail.com">Sebastien Soudan</a>
+<a href="https://github.com/ssoudan">Sebastien Soudan</a>
+<a href="https://github.com/philixxx">Philippe Martinez</a>
 
 ## Table of Contrent
 
@@ -308,7 +309,7 @@ The error is centered on 0 and varies from -180 (excluded) to 180 (included).
 The output of the PID is fed to the steering module which interpret this as the 
 rotation to be done in one direction or the other. 
 
-We use the following golang implementation of a PID: [felixge/pidctrl](https://github.com/felixge/pidctrl).
+We use the following out own implementation of a PID with filtered derivative.
 
 #### 3.4.5 Software Architecture
 
@@ -330,13 +331,32 @@ It reads on the input channels, does what it has to do and send messages to anot
 
 #### 3.4.6 OS integration
 
-<!-- TODO(ssoudan) integration with boot -->
+##### Integration with the OS boot
+At boot the alarm is on until the edisonIsThePilot is started.
+For that we will use systemd:
+
+    # cp edisonIsThePilot.service /lib/systemd/system/
+    # systemctl enable edisonIsThePilot
+
+To check the status of the service: 
+
+    # systemctl status edisonIsThePilot -l
+
+##### Integration with the OS watchdog
 <!-- TODO(ssoudan) integration with watchdog -->
-<!-- TODO(ssoudan) integration with logs -->
+
+#### Log rotation
+<!-- `edisonIsThePilot` writes both to stderr and '/var/log/edisonIsThePilot.log'. When the program is started or when the size of the file gets greater than 40MB (check performed every `logger.maxWriteCountWithoutCheck` writes), 
+the file is rotated to /var/log/edisonIsThePilot.log.old (previous edisonIsThePilot.log.old is deleted) and a new '/var/log/edisonIsThePilot.log' is created. -->
+Logs are managed by journalctl.
+
+They can be watched with: 
+
+    # journalctl -u edisonIsThePilot
 
 #### 3.4.7 Mechanical integration
 
-<!-- TODO(ssoudan) -->
+<!-- TODO(phi) -->
 
 #### 3.4.8 Power source
 We use a 12v power source. This is the fed directly to the Vin of the Edison and the Big EasyDriver which control the stepper motor. 
