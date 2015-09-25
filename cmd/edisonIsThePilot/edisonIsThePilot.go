@@ -18,14 +18,12 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 15:57:03
+* @Last Modified time: 2015-09-25 11:29:32
  */
 
 package main
 
 import (
-	"github.com/felixge/pidctrl"
-
 	"time"
 
 	"github.com/ssoudan/edisonIsThePilot/alarm"
@@ -37,6 +35,7 @@ import (
 	"github.com/ssoudan/edisonIsThePilot/drivers/pwm"
 	"github.com/ssoudan/edisonIsThePilot/gps"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
+	"github.com/ssoudan/edisonIsThePilot/infrastructure/pid"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/utils"
 	"github.com/ssoudan/edisonIsThePilot/pilot"
 	"github.com/ssoudan/edisonIsThePilot/steering"
@@ -261,8 +260,13 @@ func main() {
 	////////////////////////////////////////
 	// an amazing PID
 	////////////////////////////////////////
-	pidController := pidctrl.NewPIDController(conf.P, conf.I, conf.D)
-	pidController.SetOutputLimits(conf.MinPIDOutputLimits, conf.MaxPIDOutputLimits)
+	pidController := pid.New(
+		conf.P,
+		conf.I,
+		conf.D,
+		conf.N,
+		conf.MinPIDOutputLimits,
+		conf.MaxPIDOutputLimits)
 
 	////////////////////////////////////////
 	// a great pilot

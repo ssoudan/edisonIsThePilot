@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:18:01
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 21:25:45
+* @Last Modified time: 2015-09-25 11:31:03
  */
 
 package conf
@@ -53,6 +53,7 @@ const (
 	P                  = 0.0870095459081994
 	I                  = 7.32612847120554e-05
 	D                  = 22.0896577752675
+	N                  = 0.25625893108953
 
 	GpsSerialPort                  = "/dev/ttyMFD1"
 	NoInputMessageTimeoutInSeconds = 10

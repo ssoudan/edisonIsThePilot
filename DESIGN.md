@@ -309,7 +309,7 @@ The error is centered on 0 and varies from -180 (excluded) to 180 (included).
 The output of the PID is fed to the steering module which interpret this as the 
 rotation to be done in one direction or the other. 
 
-We use the following golang implementation of a PID: [felixge/pidctrl](https://github.com/felixge/pidctrl).
+We use the following out own implementation of a PID with filtered derivative.
 
 #### 3.4.5 Software Architecture
 
