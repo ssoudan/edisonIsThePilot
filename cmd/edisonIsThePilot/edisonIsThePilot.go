@@ -18,12 +18,15 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-25 11:29:32
+* @Last Modified time: 2015-09-26 17:56:51
  */
 
 package main
 
 import (
+	"fmt"
+	"io"
+	"net/http"
 	"time"
 
 	"github.com/ssoudan/edisonIsThePilot/alarm"
@@ -45,9 +48,11 @@ var log = logger.Log("edisonIsThePilot")
 
 var Version = "unknown"
 
-func main() {
-	// TODO(ssoudan) need to make sure there is a single process running! --> a socket could do the job
+func hello(w http.ResponseWriter, r *http.Request) {
+	io.WriteString(w, fmt.Sprintf("Edison is the pilot - %s", Version))
+}
 
+func main() {
 	log.Info("Starting -- version %s", Version)
 
 	panicChan := make(chan interface{})
@@ -76,6 +81,20 @@ func main() {
 			}
 
 			log.Fatalf("Version %v -- Received a panic error -- exiting: %v", Version, m)
+		}
+	}()
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				panicChan <- r
+			}
+		}()
+
+		http.HandleFunc("/", hello)
+		err := http.ListenAndServe(":8000", nil)
+		if err != nil {
+			log.Panic("Already running! or something is living on port 8000 - exiting")
 		}
 	}()
 

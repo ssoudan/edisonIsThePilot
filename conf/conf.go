@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:18:01
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-25 11:31:03
+* @Last Modified time: 2015-09-27 13:56:13
  */
 
 package conf
@@ -28,9 +28,9 @@ import (
 )
 
 var MessageToPin = map[string]byte{
-	dashboard.NoGPSFix:                40, // J19 - pin 10
-	dashboard.InvalidGPSData:          43, // J19 - pin 11
-	dashboard.SpeedTooLow:             48, // J19 - pin 6
+	dashboard.NoGPSFix:                43, // J19 - pin 11
+	dashboard.InvalidGPSData:          48, // J19 - pin 6
+	dashboard.SpeedTooLow:             40, // J19 - pin 10
 	dashboard.HeadingErrorOutOfBounds: 82, // J19 - pin 13
 	dashboard.CorrectionAtLimit:       83, // J19 - pin 14
 }

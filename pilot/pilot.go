@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 14:59:04
+* @Last Modified time: 2015-09-25 22:35:06
  */
 
 package pilot
@@ -253,7 +253,6 @@ func (p Pilot) Start() {
 				case DisableAction:
 					p.disable()
 				case error:
-					// TODO(ssoudan) is that enough?
 					log.Error("Received an error: %v", m)
 					p.updateAfterError()
 				}

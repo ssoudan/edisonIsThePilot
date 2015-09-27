@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:24:54
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 14:58:11
+* @Last Modified time: 2015-09-26 22:16:29
  */
 
 package main
@@ -53,15 +53,17 @@ func main() {
 		stepsBySecond uint32
 		duration      time.Duration
 	}{
-		{true, 200, 5 * time.Second},
-		{true, 400, 5 * time.Second},
-		{false, 200, 5 * time.Second},
-		{false, 400, 5 * time.Second},
+		// {true, 100, time.Duration(0.4 * float64(time.Second))},
+		// {true, 200, time.Duration(0.8 * float64(time.Second))},
+		{true, 600, time.Duration(2 * float64(time.Second))},
+		// {true, 400, 5 * time.Second},
+		// {false, 200, 5 * time.Second},
+		// {false, 400, 5 * time.Second},
 	}
 
 	for _, s := range steps {
 		step(motor, s.clockwise, s.stepsBySecond, s.duration)
-		time.Sleep(10 * time.Second)
+		// time.Sleep(1 * time.Second)
 	}
 
 }
