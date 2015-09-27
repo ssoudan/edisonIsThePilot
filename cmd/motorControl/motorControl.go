@@ -18,12 +18,14 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:24:54
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-26 22:16:29
+* @Last Modified time: 2015-09-27 15:49:35
  */
 
 package main
 
 import (
+	"github.com/jessevdk/go-flags"
+
 	"time"
 
 	"github.com/ssoudan/edisonIsThePilot/conf"
@@ -32,6 +34,16 @@ import (
 )
 
 var log = logger.Log("motorControl")
+
+type Options struct {
+	Clockwise bool   `short:"c" long:"clockwise" description:"clockwise rotation" default:"false"`
+	Speed     uint32 `short:"s" long:"speed" description:"rotation speed pps" default:"600"`
+	Duration  int64  `short:"d" long:"duration" description:"duration (seconds)" default:"1"`
+}
+
+var opts Options
+
+var parser = flags.NewParser(&opts, flags.Default)
 
 func step(motor *motor.Motor, clockwise bool, stepsBySecond uint32, duration time.Duration) {
 	motor.Enable()
@@ -42,6 +54,11 @@ func step(motor *motor.Motor, clockwise bool, stepsBySecond uint32, duration tim
 
 func main() {
 
+	if _, err := parser.Parse(); err != nil {
+		log.Fatalf("failed to parse options: %v", err)
+	}
+
+	log.Info("%v", opts)
 	motor := motor.New(
 		conf.MotorStepPin,
 		conf.MotorStepPwm,
@@ -55,7 +72,9 @@ func main() {
 	}{
 		// {true, 100, time.Duration(0.4 * float64(time.Second))},
 		// {true, 200, time.Duration(0.8 * float64(time.Second))},
-		{true, 600, time.Duration(2 * float64(time.Second))},
+
+		{opts.Clockwise, opts.Speed, time.Duration(time.Duration(opts.Duration) * time.Second)},
+
 		// {true, 400, 5 * time.Second},
 		// {false, 200, 5 * time.Second},
 		// {false, 400, 5 * time.Second},

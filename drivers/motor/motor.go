@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 18:58:22
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 17:37:16
+* @Last Modified time: 2015-09-27 15:01:07
  */
 
 package motor
@@ -111,13 +111,13 @@ func (m Motor) Move(clockwise bool, stepsBySecond uint32, duration time.Duration
 
 	var err error
 	if clockwise {
-		err = m.dirGPIO.Enable()
+		err = m.dirGPIO.Disable()
 		if err != nil {
 			log.Panicf("Failed to set direction: %v", err)
 			return err // Not supposed to reach here
 		}
 	} else {
-		err = m.dirGPIO.Disable()
+		err = m.dirGPIO.Enable()
 		if err != nil {
 			log.Panicf("Failed to set direction: %v", err)
 			return err // Not supposed to reach here
