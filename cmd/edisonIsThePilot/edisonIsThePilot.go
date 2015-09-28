@@ -18,14 +18,12 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-26 17:56:51
+* @Last Modified time: 2015-09-28 22:16:53
  */
 
 package main
 
 import (
-	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -40,6 +38,7 @@ import (
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/pid"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/utils"
+	"github.com/ssoudan/edisonIsThePilot/infrastructure/webserver"
 	"github.com/ssoudan/edisonIsThePilot/pilot"
 	"github.com/ssoudan/edisonIsThePilot/steering"
 )
@@ -47,10 +46,6 @@ import (
 var log = logger.Log("edisonIsThePilot")
 
 var Version = "unknown"
-
-func hello(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, fmt.Sprintf("Edison is the pilot - %s", Version))
-}
 
 func main() {
 	log.Info("Starting -- version %s", Version)
@@ -91,7 +86,7 @@ func main() {
 			}
 		}()
 
-		http.HandleFunc("/", hello)
+		http.HandleFunc("/", webserver.VersionEndpoint(Version))
 		err := http.ListenAndServe(":8000", nil)
 		if err != nil {
 			log.Panic("Already running! or something is living on port 8000 - exiting")

@@ -3,3 +3,6 @@ motorControl
 alarmControl
 motorCalibration
 ledControl
+.idea/
+edisonIsThePilot.iml
+systemCalibration
