@@ -1,6 +1,8 @@
 
 # Autopilot Design
 
+You can find the latest version <a href="https://github.com/ssoudan/edisonIsThePilot">here</a>.
+
 <a href="https://github.com/ssoudan">Sebastien Soudan</a>
 <a href="https://github.com/philixxx">Philippe Martinez</a>
 
@@ -17,6 +19,8 @@
 ## 1 -- Problem statement
 
 For now, we want **a system that can hold the heading by acting on the rudder**.
+
+DISCLAIMER -- this can hurt and/or cause plenty of other things you don't want. Don't use it unless that's what your are after!
 
 ### 1.1 Requirements
 
@@ -116,13 +120,20 @@ Thus, for the inital iteration, we will focus on the heading control autopilot d
                       \-------| compass/gps? |<----------------------/
                               |--------------|
 
-// TODO(ssoudan) need to figure out how the steering wheel/rudder system works.
+We assume the rudder system to be linear.
 
     [Rudder system]
     steering     |------| rudder angle
     -----------> |   K  | ----------->
     angle        |------|
                  
+
+The boat is assumed to an integrating system:
+
+    [Boat]
+    rudder angle |-------|  heading
+    -----------> |  Kb/s | ----------->
+                 |-------|
 
 ## 3 -- Heading Control Autopilot
 
@@ -135,7 +146,7 @@ Let's go over requirements of section 1.1.
 - emergency disconnect: the stepper motor will be 'sleeping' mode (no holding torque) all the time but when it is actually driving the motor - two switches will be available: one to enable/disable the autopilot (soft), one to power on/off the system. When the system is powered off, there is no holding torque from the motor either.
 - powerful enough actuator: stepper motor with adjustable torque (current limiting on the stepper driver board)
 - as little button as possible: 2 ON/OFF switches
-- ability to tune/calibrate the system on-board: TODO
+- ability to tune/calibrate the system on-board: 
   - sinusoidal steering wheel input of know amplitude and frequency -- for different frequencies
   - record/export track
   - ability to change the parameters
@@ -364,25 +375,49 @@ For the other components (GPS and level shifters), we have 2 regulators on the b
 
 #### 3.4.9 Security
 
-<!-- TODO(ssoudan) -->
-- operating conditions
-- disengagement
-- alarm condition
-- handling of recoverable errors
+When the pilot is enabled and detect an error or an over limit condition, the alarm is raised and the (autopilot) steering is disabled. Whenever the system is rebooted/restarted, the alarm is raised before the autopilot is operational (continuous beep) and continues to beep if the autopilot enabled button is ON when it starts. 
 
 ### 3.5 Tests and Validation
-<!-- TODO(ssoudan) -->
+
+We have:
+
+- unit/behavorial tests
+- standalone programs to test different subsystems that have been used to test the board and its actuators on a bench
+- matlab simulations to validate the feasibility of the entire system under some assumptions about the boat and steering chain behavior.
 
 ### 3.5.1 Boundaries 
 
-<!-- TODO(ssoudan) -->
+We have different thresholds for that:
+
+- minimum speed -> to cover for inaccurate gps heading
+- maximum control angle -> to prevent to rapid correction which could be dangerous
+- maximum allowable error -> to detect instablities and alert the pilot.
+
+### 3.6 Calibration procedure
+
+The purpose of this calibration is to measure the behavior of the controlled system, assess its linearity, and find the parameters of the model that describe it.
+
+#### 3.6.1 Step response
+
+Using 'systemCalibration' which is made of the 'steering' and 'gps' components only.
+
+We first need to make sure 'edisonIsThePilot' service is down.
+Then ensure we have enough place for the operation.
+
+Once the boat is going straight at constant speed (cruising speed):
+- note the heading of the boat
+- start a stopwatch when X degree of steering is added as fast a possible - hold this steering
+- every seconds, note the heading of the boat
+
+'systemCalibration' does this procedure automatically.
+
+To test the linearity of the system, multiple such campaign need to be performed for different values of X, on both side and multiple speed if that's relevant.
+
+#### 3.6.2 Frequency response
+
+TODO(ssoudan)
 
 
-### 3.6 Missing parts
 
-- fuse
-- 12v regulator
-- spare parts
-- labels
-- case
+
 
