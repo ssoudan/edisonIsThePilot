@@ -1,8 +1,8 @@
-edisonIsThePilot
-motorControl
-alarmControl
-motorCalibration
-ledControl
+./edisonIsThePilot
+./motorControl
+./alarmControl
+./motorCalibration
+./ledControl
 .idea/
 edisonIsThePilot.iml
-systemCalibration
+./systemCalibration
