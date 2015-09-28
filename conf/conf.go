@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:18:01
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-27 13:56:13
+* @Last Modified time: 2015-09-28 23:42:04
  */
 
 package conf
@@ -37,23 +37,23 @@ var MessageToPin = map[string]byte{
 
 const (
 	AlarmGpioPin  = 183 // J18 - pin 8
-	AlarmGpioPWM  = 3
+	AlarmGpioPWM  = 3   // correspondong pwm number
 	MotorDirPin   = 165 // J18 - pin 2
 	MotorSleepPin = 12  // J18 - pin 7
 	MotorStepPin  = 182 // J17 - pin 1
-	MotorStepPwm  = 2
-	SwitchGpioPin = 46 // J19 - pin 5
+	MotorStepPwm  = 2   // correspondong pwm number
+	SwitchGpioPin = 46  // J19 - pin 5
 )
 
 const (
-	// TODO(ssoudan) these figures need to be scaled with the reduction factor of the transmission
-	Bounds             = 15.
-	MaxPIDOutputLimits = 15
-	MinPIDOutputLimits = -15
-	P                  = 0.0870095459081994
-	I                  = 7.32612847120554e-05
-	D                  = 22.0896577752675
-	N                  = 0.25625893108953
+	Bounds                 = 15.                          // error bound in degree
+	SteeringReductionRatio = 15.2                         // reduction ratio between the motor and the steering wheel
+	MaxPIDOutputLimits     = 15 * SteeringReductionRatio  // maximum pid output value (in degree)
+	MinPIDOutputLimits     = -15 * SteeringReductionRatio // minimum pid output value (in degree)
+	P                      = 0.0870095459081994           // Proportional coefficient
+	I                      = 7.32612847120554e-05         // Integrative coefficient
+	D                      = 22.0896577752675             // Derivative coefficient
+	N                      = 0.25625893108953             // Derivative filter coefficient
 
 	GpsSerialPort                  = "/dev/ttyMFD1"
 	NoInputMessageTimeoutInSeconds = 10

@@ -3,7 +3,7 @@
 
 You can find the latest version <a href="https://github.com/ssoudan/edisonIsThePilot">here</a>.
 
-<a href="https://github.com/ssoudan">Sebastien Soudan</a>
+<a href="https://github.com/ssoudan">Sebastien Soudan</a> --
 <a href="https://github.com/philixxx">Philippe Martinez</a>
 
 ## Table of Contrent
