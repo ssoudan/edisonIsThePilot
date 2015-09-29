@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-27 22:18:56
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-29 13:24:19
+* @Last Modified time: 2015-09-29 14:05:17
  */
 
 package main
@@ -46,8 +46,9 @@ var log = logger.Log("systemCalibration")
 var Version = "unknown"
 
 type Options struct {
-	Step     float64 `short:"s" long:"step" description:"step intensity (motor rotation in degree)" required:"true"`
-	Duration int64   `short:"d" long:"duration" description:"duration (seconds)" required:"true"`
+	Step        float64 `short:"s" long:"step" description:"step intensity (motor rotation in degree)" required:"true"`
+	Duration    int64   `short:"d" long:"duration" description:"duration (seconds)" required:"true"`
+	Description string  `short:"D" long:"description" description:"description of the test" required:"true"`
 }
 
 var opts Options
@@ -209,7 +210,7 @@ When the test is over your are free to resume normal operations.`, opts.Step, op
 	}()
 
 	// populate the scenario
-	stepperChan <- stepper.NewStep(opts.Step, time.Duration(opts.Duration))
+	stepperChan <- stepper.NewStep(opts.Step, time.Duration(opts.Duration), opts.Description)
 
 	// FUTURE(ssoudan) We can imagine to generate the input from matlab? :)
 

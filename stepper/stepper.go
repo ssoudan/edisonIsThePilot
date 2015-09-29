@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-29 10:43:34
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-29 13:15:27
+* @Last Modified time: 2015-09-29 14:04:34
  */
 
 package stepper
@@ -108,6 +108,7 @@ type plan struct {
 	plot_command string
 	input        input
 	points       []point
+	description  string
 }
 
 type Stepper struct {
@@ -126,12 +127,13 @@ func New() *Stepper {
 }
 
 type message struct {
-	step     float64
-	duration time.Duration
+	step        float64
+	duration    time.Duration
+	description string
 }
 
-func NewStep(step float64, duration time.Duration) interface{} {
-	return message{step: step, duration: duration}
+func NewStep(step float64, duration time.Duration, description string) interface{} {
+	return message{step: step, duration: duration, description: description}
 }
 
 func (d *Stepper) SetInputChan(c chan interface{}) {
@@ -173,6 +175,7 @@ func (d *Stepper) processNewStepMessage(m message) {
 		d.plan.test_type = fmt.Sprintf("bump test of %f", m.step)
 		d.plan.input.duration = JSONDuration(m.duration)
 		d.plan.input.step = m.step
+		d.plan.description = m.description
 	}
 
 }
@@ -233,7 +236,7 @@ func (d *Stepper) processGPSMessage(m pilot.GPSFeedBackAction) {
 		json.NewEncoder(f).Encode(d.plan)
 
 		// tell the pilot the calibration test is over and data can be collected
-		log.Info("The bump test is over. You can disable the autopilot, stop the program and start another test.")
+		log.Notice("The bump test is over. You can disable the autopilot, stop the program and start another test.")
 	}
 
 }
