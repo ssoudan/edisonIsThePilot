@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-27 22:18:56
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-29 19:30:25
+* @Last Modified time: 2015-09-29 22:43:45
  */
 
 package main
@@ -210,7 +210,7 @@ When the test is over your are free to resume normal operations.`, opts.Step, op
 	}()
 
 	// populate the scenario
-	stepperChan <- stepper.NewStep(opts.Step, time.Duration(opts.Duration), opts.Description)
+	stepperChan <- stepper.NewStep(opts.Step, time.Duration(opts.Duration)*time.Second, opts.Description)
 
 	// FUTURE(ssoudan) We can imagine to generate the input from matlab? :)
 

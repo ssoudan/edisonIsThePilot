@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-29 10:43:34
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-29 18:18:53
+* @Last Modified time: 2015-09-29 23:03:11
  */
 
 package stepper
@@ -47,10 +47,10 @@ func (t JSONTime) MarshalJSON() ([]byte, error) {
 	return []byte(stamp), nil
 }
 
-type input struct {
-	duration JSONDuration
-	heading  float64
-	step     float64
+type Input struct {
+	Duration JSONDuration
+	Heading  float64
+	Step     float64
 }
 
 type JSONDuration time.Duration
@@ -60,16 +60,16 @@ func (d JSONDuration) MarshalJSON() ([]byte, error) {
 	return []byte(stamp), nil
 }
 
-type point struct {
-	timestamp      JSONTime
-	fix_time       string
-	fix_date       string
-	course         float64
-	speed          float64
-	delta_steering float64
-	latitude       nmea.LatLong
-	longitude      nmea.LatLong
-	validity       bool
+type Point struct {
+	Timestamp      JSONTime
+	Fix_time       string
+	Fix_date       string
+	Course         float64
+	Speed          float64
+	Delta_steering float64
+	Latitude       nmea.LatLong
+	Longitude      nmea.LatLong
+	Validity       bool
 }
 
 const (
@@ -82,33 +82,33 @@ const (
 	ABORTED = iota
 )
 
-type state int
+type State int
 
-func (d state) MarshalJSON() ([]byte, error) {
+func (d State) MarshalJSON() ([]byte, error) {
 	field := "UNKNOWN"
 	switch d {
 	case ARMED:
-		field = "ARMED"
+		field = "\"ARMED\""
 	case GO:
-		field = "GO"
+		field = "\"GO\""
 	case RUNNING:
-		field = "RUNNING"
+		field = "\"RUNNING\""
 	case DONE:
-		field = "DONE"
+		field = "\"DONE\""
 	case ABORTED:
-		field = "ABORTED"
+		field = "\"ABORTED\""
 	}
 	return []byte(field), nil
 }
 
 type plan struct {
-	state        state
-	start        JSONTime
-	test_type    string
-	plot_command string
-	input        input
-	points       []point
-	description  string
+	State        State
+	Start        JSONTime
+	Test_type    string
+	Plot_command string
+	Input        Input
+	Points       []Point
+	Description  string
 }
 
 type Stepper struct {
@@ -123,7 +123,7 @@ type Stepper struct {
 }
 
 func New() *Stepper {
-	return &Stepper{shutdownChan: make(chan interface{}), plan: plan{state: UNDEFINED}}
+	return &Stepper{shutdownChan: make(chan interface{}), plan: plan{State: UNDEFINED}}
 }
 
 type message struct {
@@ -170,12 +170,12 @@ func (d *Stepper) processNewStepMessage(m message) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	if d.plan.state == UNDEFINED {
-		d.plan.state = ARMED
-		d.plan.test_type = fmt.Sprintf("bump test of %f", m.step)
-		d.plan.input.duration = JSONDuration(m.duration)
-		d.plan.input.step = m.step
-		d.plan.description = m.description
+	if d.plan.State == UNDEFINED {
+		d.plan.State = ARMED
+		d.plan.Test_type = fmt.Sprintf("bump test of %f", m.step)
+		d.plan.Input.Duration = JSONDuration(m.duration)
+		d.plan.Input.Step = m.step
+		d.plan.Description = m.description
 	}
 
 }
@@ -187,56 +187,55 @@ func (d *Stepper) processGPSMessage(m pilot.GPSFeedBackAction) {
 
 	now := time.Now()
 
-	switch d.plan.state {
+	switch d.plan.State {
 
 	case GO:
-		d.plan.input.heading = m.Heading
-		d.plan.state = RUNNING
-		d.plan.points = []point{{
-			timestamp:      JSONTime(now),
-			fix_date:       m.Date,
-			fix_time:       m.Time,
-			course:         m.Heading,
-			speed:          m.Speed,
-			delta_steering: d.plan.input.step,
-			latitude:       m.Latitude,
-			longitude:      m.Longitude,
-			validity:       m.Validity,
+		d.plan.Input.Heading = m.Heading
+		d.plan.State = RUNNING
+		d.plan.Points = []Point{{
+			Timestamp:      JSONTime(now),
+			Fix_date:       m.Date,
+			Fix_time:       m.Time,
+			Course:         m.Heading,
+			Speed:          m.Speed,
+			Delta_steering: d.plan.Input.Step,
+			Latitude:       m.Latitude,
+			Longitude:      m.Longitude,
+			Validity:       m.Validity,
 		}}
-		d.plan.start = JSONTime(now)
+		d.plan.Start = JSONTime(now)
 
 		// send message to steering -- that's where we punch the system
-		d.steeringChan <- steering.NewMessage(d.plan.input.step)
+		d.steeringChan <- steering.NewMessage(d.plan.Input.Step)
 
 	case RUNNING:
-		d.plan.points = append(d.plan.points, point{
-			timestamp:      JSONTime(now),
-			course:         m.Heading,
-			speed:          m.Speed,
-			delta_steering: 0,
-			latitude:       m.Latitude,
-			longitude:      m.Longitude,
-			validity:       m.Validity,
+		d.plan.Points = append(d.plan.Points, Point{
+			Timestamp:      JSONTime(now),
+			Course:         m.Heading,
+			Speed:          m.Speed,
+			Delta_steering: 0,
+			Latitude:       m.Latitude,
+			Longitude:      m.Longitude,
+			Validity:       m.Validity,
 		})
 
-		if now.After(time.Time(d.plan.start).Add(time.Duration(d.plan.input.duration))) {
+		if time.Time(d.plan.Start).Add(time.Duration(d.plan.Input.Duration)).Before(now) {
 			// Time is up
-			d.plan.state = DONE
+			// write to file
+			f, err := os.Create("/tmp/systemCalibration-" + time.Now().Format(time.RFC3339))
+			if err != nil {
+				log.Error("Failed to open experiment log file: %v", err)
+				break
+			}
+			defer f.Close()
+			json.NewEncoder(f).Encode(d.plan)
+
+			// tell the pilot the calibration test is over and data can be collected
+			log.Notice("The bump test is over. You can disable the autopilot, stop the program and start another test.")
+			d.plan.State = DONE
 		}
 	case DONE:
-		// write to file
-		log.Info("Done with %#v", d.plan)
-
-		f, err := os.Create("/tmp/systemCalibration-" + time.Now().Format(time.RFC3339))
-		if err == nil {
-			log.Error("Failed to open experiment log file: %v", err)
-			break
-		}
-		defer f.Close()
-		json.NewEncoder(f).Encode(d.plan)
-
-		// tell the pilot the calibration test is over and data can be collected
-		log.Notice("The bump test is over. You can disable the autopilot, stop the program and start another test.")
+		// Nothing
 	}
 
 }
@@ -246,9 +245,9 @@ func (d *Stepper) enable() {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	switch d.plan.state {
+	switch d.plan.State {
 	case ARMED:
-		d.plan.state = GO
+		d.plan.State = GO
 	}
 }
 
@@ -257,8 +256,8 @@ func (d *Stepper) disable() {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	if d.plan.state != DONE {
-		d.plan.state = ABORTED
+	if d.plan.State != DONE {
+		d.plan.State = ABORTED
 	}
 
 }
@@ -274,8 +273,8 @@ func (d *Stepper) shutdown() {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	if d.plan.state != DONE {
-		d.plan.state = ABORTED
+	if d.plan.State != DONE {
+		d.plan.State = ABORTED
 	}
 
 	close(d.shutdownChan)
@@ -319,7 +318,11 @@ func (d *Stepper) Start() {
 }
 
 func (d *Stepper) CalibrationEndpoint(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	d.mu.RLock()
 	defer d.mu.RUnlock()
-	json.NewEncoder(w).Encode(d.plan)
+	err := json.NewEncoder(w).Encode(d.plan)
+	if err != nil {
+		log.Error("Failed to encode %v", err)
+	}
 }
