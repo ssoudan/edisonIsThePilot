@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-29 10:43:34
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-29 12:32:24
+* @Last Modified time: 2015-09-29 13:15:27
  */
 
 package stepper
@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -220,10 +221,19 @@ func (d *Stepper) processGPSMessage(m pilot.GPSFeedBackAction) {
 			d.plan.state = DONE
 		}
 	case DONE:
-		// TODO(ssoudan) write to file
+		// write to file
 		log.Info("Done with %#v", d.plan)
 
-		// TODO(ssoudan) tell the pilot the calibration test is over and data can be collected
+		f, err := os.Create("/tmp/systemCalibration-" + time.Now().Format(time.RFC3339))
+		if err == nil {
+			log.Error("Failed to open experiment log file: %v", err)
+			break
+		}
+		defer f.Close()
+		json.NewEncoder(f).Encode(d.plan)
+
+		// tell the pilot the calibration test is over and data can be collected
+		log.Info("The bump test is over. You can disable the autopilot, stop the program and start another test.")
 	}
 
 }
@@ -244,7 +254,9 @@ func (d *Stepper) disable() {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	d.plan.state = ABORTED
+	if d.plan.state != DONE {
+		d.plan.state = ABORTED
+	}
 
 }
 

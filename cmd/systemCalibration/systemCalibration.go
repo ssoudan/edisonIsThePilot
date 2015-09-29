@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-27 22:18:56
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-29 12:22:19
+* @Last Modified time: 2015-09-29 13:24:19
  */
 
 package main
@@ -164,7 +164,12 @@ func main() {
 	control := control.New(switchGpio, stepper_)
 	control.SetPanicChan(panicChan)
 
-	// TODO(ssoudan) tell the pilot what we are going to do
+	// tell the pilot what we are going to do
+	log.Notice(`When the autopilot button is switched to ON, we are going to acquire the 
+current heading and start a steering step of %f degree and hold it for %v. As a pilot, 
+you'll have to make sure there is enough place for that and to make sure the vessel 
+is safe. Changing the steering during the test will make it invalide. 
+When the test is over your are free to resume normal operations.`, opts.Step, opts.Duration)
 
 	gps.Start()
 	control.Start()
@@ -206,7 +211,7 @@ func main() {
 	// populate the scenario
 	stepperChan <- stepper.NewStep(opts.Step, time.Duration(opts.Duration))
 
-	// FUTURE(ssoudan) Can we imagine to generate the input from matlab? :)
+	// FUTURE(ssoudan) We can imagine to generate the input from matlab? :)
 
 	// FUTURE(ssoudan) support periodic response testing
 

@@ -353,8 +353,8 @@ To check the status of the service:
 
     # systemctl status edisonIsThePilot -l
 
-##### Integration with the OS watchdog
-<!-- TODO(ssoudan) integration with watchdog -->
+<!-- ##### Integration with the OS watchdog -->
+<!-- FUTURE(ssoudan) integration with watchdog -->
 
 #### Log rotation
 <!-- `edisonIsThePilot` writes both to stderr and '/var/log/edisonIsThePilot.log'. When the program is started or when the size of the file gets greater than 40MB (check performed every `logger.maxWriteCountWithoutCheck` writes), 
