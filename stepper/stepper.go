@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-29 10:43:34
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-29 12:16:20
+* @Last Modified time: 2015-09-29 12:32:24
  */
 
 package stepper
@@ -169,7 +169,7 @@ func (d *Stepper) processNewStepMessage(m message) {
 
 	if d.plan.state == UNDEFINED {
 		d.plan.state = ARMED
-		d.plan.test_type = fmt.Sprintf("bump test of %s", m.step)
+		d.plan.test_type = fmt.Sprintf("bump test of %f", m.step)
 		d.plan.input.duration = JSONDuration(m.duration)
 		d.plan.input.step = m.step
 	}
@@ -249,7 +249,7 @@ func (d *Stepper) disable() {
 }
 
 // Shutdown sets all the state to down and notify the handlers
-func (d Stepper) Shutdown() {
+func (d *Stepper) Shutdown() {
 
 	d.shutdownChan <- 1
 	<-d.shutdownChan
@@ -303,7 +303,7 @@ func (d *Stepper) Start() {
 
 }
 
-func (d Stepper) CalibrationEndpoint(w http.ResponseWriter, r *http.Request) {
+func (d *Stepper) CalibrationEndpoint(w http.ResponseWriter, r *http.Request) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	json.NewEncoder(w).Encode(d.plan)
