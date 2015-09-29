@@ -415,7 +415,7 @@ To test the linearity of the system, multiple such campaign need to be performed
 
 #### 3.6.2 Frequency response
 
-TODO(ssoudan)
+FUTURE(ssoudan) in the future we might want to do that, but since we don't know the range of frequency of the perturbation we can see we will delay that.
 
 
 

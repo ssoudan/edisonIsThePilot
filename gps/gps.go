@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 17:13:41
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-28 21:08:42
+* @Last Modified time: 2015-09-29 10:21:43
  */
 
 package gps
@@ -122,9 +122,13 @@ func (g GPS) doReceiveGPSMessages() {
 		case nmea.GPRMC:
 			log.Info("[GPRMC] validity: %v heading: %v[˚] speed: %v[knots] \n", t.Validity == "A", t.Course, t.Speed)
 			g.messagesChan <- pilot.GPSFeedBackAction{
-				Heading:  t.Course,
-				Validity: t.Validity == "A",
-				Speed:    t.Speed,
+				Heading:   t.Course,
+				Validity:  t.Validity == "A",
+				Speed:     t.Speed,
+				Longitude: t.Longitude,
+				Latitude:  t.Latitude,
+				Date:      t.Date,
+				Time:      t.Time,
 			}
 		}
 	}

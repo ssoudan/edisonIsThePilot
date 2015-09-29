@@ -18,80 +18,60 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-27 22:18:56
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-28 23:35:30
+* @Last Modified time: 2015-09-29 12:22:19
  */
 
 package main
 
 import (
-	"encoding/json"
+	"github.com/jessevdk/go-flags"
+
 	"net/http"
-	"sync"
 	"time"
 
+	"github.com/ssoudan/edisonIsThePilot/conf"
+	"github.com/ssoudan/edisonIsThePilot/control"
+	"github.com/ssoudan/edisonIsThePilot/drivers/gpio"
+	"github.com/ssoudan/edisonIsThePilot/drivers/motor"
+	"github.com/ssoudan/edisonIsThePilot/gps"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/utils"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/webserver"
+	"github.com/ssoudan/edisonIsThePilot/steering"
+	"github.com/ssoudan/edisonIsThePilot/stepper"
 )
 
 var log = logger.Log("systemCalibration")
 
 var Version = "unknown"
 
-type parameters map[string]string
-
-type step struct {
-	step_number uint32
-	parameters  parameters
+type Options struct {
+	Step     float64 `short:"s" long:"step" description:"step intensity (motor rotation in degree)" required:"true"`
+	Duration int64   `short:"d" long:"duration" description:"duration (seconds)" required:"true"`
 }
 
-type point struct {
-	timestamp      time.Time
-	course         float64
-	speed          float64
-	delta_steering float64
-	latitude       float64
-	longitude      float64
-	validity       bool
-	step_number    uint32
-}
+var opts Options
 
-const (
-	DONE    = "DONE"
-	RUNNING = "RUNNING"
-)
-
-type experiment struct {
-	state        string
-	test_type    string
-	parameters   parameters
-	plot_command string
-	steps        []step
-	points       []point
-}
-
-var world struct {
-	mu    sync.RWMutex
-	infos []experiment // protected by mu
-}
-
-func info(w http.ResponseWriter, r *http.Request) {
-	world.mu.RLock()
-	defer world.mu.RUnlock()
-	json.NewEncoder(w).Encode(world.infos)
-}
+var parser = flags.NewParser(&opts, flags.Default)
 
 func main() {
 
-	// TODO(ssoudan) parse inputs
+	// parse inputs
+	if _, err := parser.Parse(); err != nil {
+		log.Fatalf("failed to parse options: %v", err)
+	}
 
-	// TODO(ssoudan) define scenario input format
+	// Scenario input format
 	// we want scenario with different speed
 	// we want scenario with positive and negative steering changes
 	// we want different values of those changes
 	// we want different initial steering (do we?)
+	// we want a scenario where we just go straight to record the noise
+	// ---> all that can be defined with the step height and the duration
 
 	log.Info("Starting -- version %s", Version)
+
+	log.Info("Opts: %#v", opts)
 
 	panicChan := make(chan interface{})
 	defer func() {
@@ -100,45 +80,113 @@ func main() {
 		}
 	}()
 
+	stepperChan := make(chan interface{})
+
+	// The motor
+	motor := motor.New(
+		conf.MotorStepPin,
+		conf.MotorStepPwm,
+		conf.MotorDirPin,
+		conf.MotorSleepPin)
+	defer motor.Unexport()
+
+	// the input button
+	switchGpio := func(pin byte) gpio.Gpio {
+
+		// kill the process (via log.Panic) in case we can't create the GPIO
+		err := gpio.EnableGPIO(pin)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		var g = gpio.New(pin)
+		if !g.IsExported() {
+			err = g.Export()
+			if err != nil {
+				log.Panic(err)
+			}
+		}
+
+		err = g.SetDirection(gpio.IN)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		err = g.SetActiveLevel(gpio.ACTIVE_HIGH)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		// Test we can read it and make we we don't go beyond this point until the switch is OFF
+		// to prevent the autopilot to be re-enabled when the system restart.
+		// Since the alarm has not been initialized yet, after a reboot it will be ON.
+		for value, err := g.Value(); value; value, err = g.Value() {
+			if err != nil {
+				log.Panic(err)
+			}
+
+			log.Info("[AUTOTEST] current autopilot switch position is ON - switch it OFF to proceed.")
+
+			time.Sleep(200 * time.Millisecond)
+		}
+
+		return g
+	}(conf.SwitchGpioPin)
+	defer switchGpio.Unexport()
+
+	////////////////////////////////////////
+	// an astonishing steering
+	////////////////////////////////////////
+	steering := steering.New(motor)
+	steeringChan := make(chan interface{})
+	steering.SetInputChan(steeringChan)
+	steering.SetPanicChan(panicChan)
+
+	////////////////////////////////////////
+	// a wonderful gps
+	////////////////////////////////////////
+	gps := gps.New(conf.GpsSerialPort)
+	gps.SetMessagesChan(stepperChan)
+	gps.SetErrorChan(stepperChan)
+	gps.SetPanicChan(panicChan)
+
+	////////////////////////////////////////
+	// a crazy stepper
+	////////////////////////////////////////
+	stepper_ := stepper.New()
+	stepper_.SetInputChan(stepperChan)
+	stepper_.SetPanicChan(panicChan)
+	stepper_.SetSteeringChan(steeringChan)
+
+	////////////////////////////////////////
+	// a surprising input
+	////////////////////////////////////////
+	control := control.New(switchGpio, stepper_)
+	control.SetPanicChan(panicChan)
+
+	// TODO(ssoudan) tell the pilot what we are going to do
+
+	gps.Start()
+	control.Start()
+	steering.Start()
+	stepper_.Start()
+	defer steering.Shutdown()
+	defer stepper_.Shutdown()
+	defer control.Shutdown()
+
 	go func() {
 		select {
 		case m := <-panicChan:
 
-			// TODO(ssoudan) do what has to be done here
+			// make sure the motor is stopped
+			err := motor.Disable()
+			if err != nil {
+				log.Error("Failed to disable the motor - exiting anyway", err)
+			}
 
 			log.Fatalf("Version %v -- Received a panic error -- exiting: %v", Version, m)
 		}
 	}()
-
-	// - Expose data via a rest api that can be used by matlab as JSON
-	// {
-	//  state: "RUNNING", // , "DONE"
-	// 	settings: {
-	// 		test_type: "test type",
-	// 		parameters: {
-	// 					x: y,
-	// 					xx: yy,
-	// 					start_time: ...,
-	// 					}
-	// 		steps: [{
-	// 			step_number: xx,
-	// 			parameters: {
-	// 					x: y,
-	// 					xx: yy,
-	// 					start_time: ...,
-	// 					}
-	// 		}]
-	// 	},
-	// 	points: [{timestamp: t,
-	// 			course: c,
-	// 			speed: s,
-	// 			delta_steering: ds,
-	// 			latitude: lat,
-	// 			longitude: lng,
-	// 			validity: v,
-	// 			step_number: xxx,
-	// 			}]
-	// }
 
 	go func() {
 		defer func() {
@@ -148,32 +196,17 @@ func main() {
 		}()
 
 		http.HandleFunc("/", webserver.VersionEndpoint(Version))
+		http.HandleFunc("/calibration", stepper_.CalibrationEndpoint)
 		err := http.ListenAndServe(":8000", nil)
 		if err != nil {
 			log.Panic("Already running! or something is living on port 8000 - exiting")
 		}
 	}()
 
-	// TODO(ssoudan) populate the scenario
-
-	// TODO(ssoudan) init the steering and gps modules
-	// TODO(ssoudan) defer Shutdown()
-
-	// TODO(ssoudan) show the pilot what is going to happen
-
-	// TODO(ssoudan) display pilot instructions (like speed)
-
-	// TODO(ssoudan) wait for start signal
-
-	// TODO(ssoudan) run the scenario
-
-	// TODO(ssoudan) write logs to file
+	// populate the scenario
+	stepperChan <- stepper.NewStep(opts.Step, time.Duration(opts.Duration))
 
 	// FUTURE(ssoudan) Can we imagine to generate the input from matlab? :)
-
-	// TODO(ssoudan) write to a file as well
-
-	// TODO(ssoudan) tel the pilot the calibration test is over and data can be collected
 
 	// FUTURE(ssoudan) support periodic response testing
 

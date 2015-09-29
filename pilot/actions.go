@@ -18,15 +18,23 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 21:45:21
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-23 07:44:22
+* @Last Modified time: 2015-09-29 10:26:24
  */
 
 package pilot
 
+import (
+	"github.com/adrianmo/go-nmea"
+)
+
 type GPSFeedBackAction struct {
-	Heading  float64
-	Validity bool
-	Speed    float64
+	Heading   float64
+	Validity  bool
+	Speed     float64
+	Latitude  nmea.LatLong
+	Longitude nmea.LatLong
+	Date      string
+	Time      string
 }
 
 type EnableAction struct {

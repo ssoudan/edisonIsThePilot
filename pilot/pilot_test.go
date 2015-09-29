@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 13:12:38
+* @Last Modified time: 2015-09-29 10:49:00
  */
 
 package pilot
@@ -331,7 +331,7 @@ func checkHeadingCase(t *testing.T, c headingCase) {
 	pilot := Pilot{heading: c.heading}
 
 	expected := c.expected
-	result := computeHeadingError(pilot.heading, c.gpsHeading)
+	result := ComputeHeadingError(pilot.heading, c.gpsHeading)
 
 	assert.EqualValues(t, expected, result, fmt.Sprintf("\"%s\" case failed", c.description))
 }
