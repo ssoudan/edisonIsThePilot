@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-29 10:43:34
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-29 14:04:34
+* @Last Modified time: 2015-09-29 18:18:53
  */
 
 package stepper
@@ -205,7 +205,7 @@ func (d *Stepper) processGPSMessage(m pilot.GPSFeedBackAction) {
 		}}
 		d.plan.start = JSONTime(now)
 
-		// send message to steering
+		// send message to steering -- that's where we punch the system
 		d.steeringChan <- steering.NewMessage(d.plan.input.step)
 
 	case RUNNING:

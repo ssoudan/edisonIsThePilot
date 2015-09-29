@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-29 10:50:16
+* @Last Modified time: 2015-09-29 19:32:19
  */
 
 package pilot
@@ -123,9 +123,7 @@ func (p *Pilot) updateFixStatus(fix FixStatus) {
 	////////////////////////
 	p.alarm = p.alarm || fixAlarm
 
-	// TODO(ssoudan) wrap this stuff in something that can be tested
 	p.leds[dashboard.NoGPSFix] = fixLed
-
 }
 
 func (p Pilot) tellTheWorld() {

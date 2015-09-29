@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-27 22:18:56
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-29 14:05:17
+* @Last Modified time: 2015-09-29 19:30:25
  */
 
 package main
@@ -168,8 +168,8 @@ func main() {
 	// tell the pilot what we are going to do
 	log.Notice(`When the autopilot button is switched to ON, we are going to acquire the 
 current heading and start a steering step of %f degree and hold it for %v. As a pilot, 
-you'll have to make sure there is enough place for that and to make sure the vessel 
-is safe. Changing the steering during the test will make it invalide. 
+you'll have to make sure there is enough place for that and the vessel is safe. 
+Changing the steering during the test will make it invalide. 
 When the test is over your are free to resume normal operations.`, opts.Step, opts.Duration)
 
 	gps.Start()
