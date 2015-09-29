@@ -37,11 +37,11 @@ var MessageToPin = map[string]byte{
 
 const (
 	AlarmGpioPin  = 183 // J18 - pin 8
-	AlarmGpioPWM  = 3   // correspondong pwm number
+	AlarmGpioPWM  = 3   // corresponding pwm number
 	MotorDirPin   = 165 // J18 - pin 2
 	MotorSleepPin = 12  // J18 - pin 7
 	MotorStepPin  = 182 // J17 - pin 1
-	MotorStepPwm  = 2   // correspondong pwm number
+	MotorStepPwm  = 2   // corresponding pwm number
 	SwitchGpioPin = 46  // J19 - pin 5
 )
 

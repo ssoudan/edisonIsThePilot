@@ -41,7 +41,7 @@ func TestCheckSpeedErrorRaisesAnAlarmWhenTooSlow(t *testing.T) {
 	assert.EqualValues(t, expected, alarm)
 }
 
-func TestCheckSpeedErrorDoNotRaiseAnAlarmWhenLargeEnougt(t *testing.T) {
+func TestCheckSpeedErrorDoNotRaiseAnAlarmWhenLargeEnough(t *testing.T) {
 
 	input := conf.MinimumSpeedInKnots * 1.1
 	alarm := checkSpeedError(input)

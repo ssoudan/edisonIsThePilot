@@ -135,7 +135,7 @@ func (g GPS) doReceiveGPSMessages() {
 }
 
 // Start creates an infinite go routine which will try to open the serial port to the GPS
-// and parse the input to delive sentences or errors on the respective channels.
+// and parse the input to deliver sentences or errors on the respective channels.
 func (g GPS) Start() {
 
 	go func() {

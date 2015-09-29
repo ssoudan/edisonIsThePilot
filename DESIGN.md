@@ -6,7 +6,7 @@ You can find the latest version <a href="https://github.com/ssoudan/edisonIsTheP
 <a href="https://github.com/ssoudan">Sebastien Soudan</a> --
 <a href="https://github.com/philixxx">Philippe Martinez</a>
 
-## Table of Contrent
+## Table of Content
 
 <!-- MarkdownTOC -->
 
@@ -53,8 +53,8 @@ The Internet plus few other things.
 We don't know the declination so the GPS heading and the compass heading will be slightly different.
 
 The compass is sensitive to angular variation though the gyroscope can help to compensate for that.
-The compass is also sensitive to the alignement with the movement direction.
-The GPS does not provide a meangingful heading when the speed is not enough.
+The compass is also sensitive to the alignment with the movement direction.
+The GPS does not provide a meaningful heading when the speed is not enough.
 
 
 #### 1.3.2 HMC5883L
@@ -162,9 +162,9 @@ Not implemented yet.
 ### 3.2 Subsystems
 
 #### 3.2.1 Heading measurement
-Seems that compass calibration might be required here to prevent non-linear behaviors. It is sensible to pitch and roll and would require a gyro to compensate for this. Also it is sensible to magnetic environnement and would require to be located as far as possible of the engine.
+Seems that compass calibration might be required here to prevent non-linear behaviors. It is sensible to pitch and roll and would require a gyro to compensate for this. Also it is sensible to magnetic environment and would require to be located as far as possible of the engine.
 
-The utilisation of a GPS to get the heading also brings some constraints but we will investiguate this way.
+The utilisation of a GPS to get the heading also brings some constraints but we will investigate this way.
 
 #### 3.2.2 Rudder control
 For now, we will assume we don't need a closed-loop control system here and the existing steering chain is fine. But we need to make sure there is as little  slackness as possible in the chain made of the motor, the steering wheel, and the rudder.
@@ -194,7 +194,7 @@ We need to support:
 - be able to read from GPIO (button)
 
 We will use an Intel Edison for this project, and can write Golang for this platform. We will need to find a couple of libraries to help us.
-The main reason for this choice is because we can write Golang. The second reason is because it is the first time I play with this platform. The third reason (which is the first reasonable reason) is beacuse the Linux, x86 architecture, 1GB of ram and on-board wifi plus all the IO pins make it a quite evolutive platform for the job. Would be relatively easy to add mapping, remote control, AIS traffic monitoring features, or a GUI...
+The main reason for this choice is because we can write Golang. The second reason is because it is the first time I play with this platform. The third reason (which is the first reasonable reason) is because the Linux, x86 architecture, 1GB of ram and on-board wifi plus all the IO pins make it a quite evolutive platform for the job. Would be relatively easy to add mapping, remote control, AIS traffic monitoring features, or a GUI...
 
 Note the Edison's wifi has an [AP mode](https://software.intel.com/en-us/getting-started-with-ap-mode-for-intel-edison-board).
 
@@ -391,7 +391,7 @@ We have different thresholds for that:
 
 - minimum speed -> to cover for inaccurate gps heading
 - maximum control angle -> to prevent to rapid correction which could be dangerous
-- maximum allowable error -> to detect instablities and alert the pilot.
+- maximum allowable error -> to detect instabilities and alert the pilot.
 
 ### 3.6 Calibration procedure
 
