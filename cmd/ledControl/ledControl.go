@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-26 17:50:09
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-27 14:04:09
+* @Last Modified time: 2015-09-30 12:35:02
  */
 
 package main
@@ -69,7 +69,7 @@ func main() {
 	}
 
 	for _, g := range dashboardGPIOs {
-		g.Disable()
+		g.Enable()
 	}
 
 }
