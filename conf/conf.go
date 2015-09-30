@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:18:01
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-30 12:45:24
+* @Last Modified time: 2015-09-30 14:33:14
  */
 
 package conf
@@ -55,10 +55,10 @@ const (
 	SteeringReductionRatio = 15.2                         // reduction ratio between the motor and the steering wheel
 	MaxPIDOutputLimits     = 15 * SteeringReductionRatio  // maximum pid output value (in degree)
 	MinPIDOutputLimits     = -15 * SteeringReductionRatio // minimum pid output value (in degree)
-	P                      = 0.0870095459081994           // Proportional coefficient
-	I                      = 7.32612847120554e-05         // Integrative coefficient
-	D                      = 22.0896577752675             // Derivative coefficient
-	N                      = 0.25625893108953             // Derivative filter coefficient
+	P                      = 0.0869670447979224           // Proportional coefficient
+	I                      = 7.00335119238032e-05         // Integrative coefficient
+	D                      = 21.9331758752948             // Derivative coefficient
+	N                      = 0.136075524385029            // Derivative filter coefficient
 
 	GpsSerialPort                  = "/dev/ttyMFD1"
 	NoInputMessageTimeoutInSeconds = 10
