@@ -61,7 +61,7 @@ We don't know the declination so the GPS heading and the compass heading will be
 
 The compass is sensitive to angular variation though the gyroscope can help to compensate for that.
 The compass is also sensitive to the alignment with the movement direction.
-The GPS does not provide a meaningful heading when the speed is not enough.
+The GPS does not provide a meaningful heading when the speed is too low.
 
 
 #### 1.3.2 HMC5883L
@@ -160,11 +160,12 @@ Let's go over requirements of section 1.1.
 
 *Note:* it would be nice to be able to disable the feedback to be able to experimentally identify the dynamic characteristic of rudder-boat system and tune the PID controller from that. 
 
-- Be able to have a sinusoidal steering input of know amplitude
+- Be able to have a step steering input of know amplitude
 - Measure the track
 - Be able to export data
 
-Not implemented yet.
+This is implemented in 'cmd/systemCalibration' and exports a JSON with the results to the filesystem or an HTTP endpoint.
+The output need to be further processed to extract the characteristics of the steering+boat system in order to tune the PID controller.
 
 ### 3.2 Subsystems
 
@@ -174,7 +175,7 @@ Seems that compass calibration might be required here to prevent non-linear beha
 The utilisation of a GPS to get the heading also brings some constraints but we will investigate this way.
 
 #### 3.2.2 Rudder control
-For now, we will assume we don't need a closed-loop control system here and the existing steering chain is fine. But we need to make sure there is as little  slackness as possible in the chain made of the motor, the steering wheel, and the rudder.
+For now, we will assume we don't need a closed-loop control system here and the existing steering chain is fine. But we need to make sure there is as little play as possible in the chain made of the motor, the steering wheel, and the rudder.
 
 The stepper motor is driven at constant speed for a duration which depends on the requested rotation. Direction of the rotation is defined when the movement is requested. Positive rotation are made in clockwise direction (for the motor). 
 
@@ -366,7 +367,7 @@ To check the status of the service:
 #### Log rotation
 <!-- `edisonIsThePilot` writes both to stderr and '/var/log/edisonIsThePilot.log'. When the program is started or when the size of the file gets greater than 40MB (check performed every `logger.maxWriteCountWithoutCheck` writes), 
 the file is rotated to /var/log/edisonIsThePilot.log.old (previous edisonIsThePilot.log.old is deleted) and a new '/var/log/edisonIsThePilot.log' is created. -->
-Logs are managed by journalctl.
+Logs are managed by journalctl. It's configuration is changed to limit the maximum amount of logs it keeps.
 
 They can be watched with: 
 
