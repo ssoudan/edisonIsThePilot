@@ -10,11 +10,18 @@ You can find the latest version <a href="https://github.com/ssoudan/edisonIsTheP
 
 <!-- MarkdownTOC -->
 
+- 0 -- To do
 - 1 -- Problem statement
 - 2 -- System Design
 - 3 -- Heading Control Autopilot
 
 <!-- /MarkdownTOC -->
+
+## 0 -- To do
+
+- FUTURE(?) LED that tell the system is powered
+- FUTURE(?) LED that tell the system is running (heartbeat)
+- FUTURE(?) Proper AP mode with the wifi  
 
 ## 1 -- Problem statement
 
