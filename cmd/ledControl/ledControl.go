@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-26 17:50:09
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-30 12:35:02
+* @Last Modified time: 2015-09-30 12:45:51
  */
 
 package main
@@ -63,9 +63,9 @@ func main() {
 		return g
 	}
 	dashboardGPIOs := make(map[string]gpio.Gpio, len(conf.MessageToPin))
-	for k, v := range conf.MessageToPin {
-		g := mapMessageToGPIO(k, v)
-		dashboardGPIOs[k] = g
+	for _, v := range conf.MessageToPin {
+		g := mapMessageToGPIO(v.Message, v.Pin)
+		dashboardGPIOs[v.Message] = g
 	}
 
 	for _, g := range dashboardGPIOs {

@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:18:01
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-28 23:42:04
+* @Last Modified time: 2015-09-30 12:45:24
  */
 
 package conf
@@ -27,12 +27,17 @@ import (
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
 )
 
-var MessageToPin = map[string]byte{
-	dashboard.NoGPSFix:                43, // J19 - pin 11
-	dashboard.InvalidGPSData:          48, // J19 - pin 6
-	dashboard.SpeedTooLow:             40, // J19 - pin 10
-	dashboard.HeadingErrorOutOfBounds: 82, // J19 - pin 13
-	dashboard.CorrectionAtLimit:       83, // J19 - pin 14
+type MessagePin struct {
+	Message string
+	Pin     byte
+}
+
+var MessageToPin = []MessagePin{
+	{dashboard.NoGPSFix, 43},                // J19 - pin 11
+	{dashboard.InvalidGPSData, 48},          // J19 - pin 6
+	{dashboard.SpeedTooLow, 40},             // J19 - pin 10
+	{dashboard.HeadingErrorOutOfBounds, 82}, // J19 - pin 13
+	{dashboard.CorrectionAtLimit, 83},       // J19 - pin 14
 }
 
 const (
