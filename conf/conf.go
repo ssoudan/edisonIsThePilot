@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:18:01
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-30 14:33:14
+* @Last Modified time: 2015-10-03 11:01:36
  */
 
 package conf
@@ -52,7 +52,7 @@ const (
 
 const (
 	Bounds                 = 15.                          // error bound in degree
-	SteeringReductionRatio = 15.2                         // reduction ratio between the motor and the steering wheel
+	SteeringReductionRatio = 380 / 25                     // reduction ratio between the motor and the steering wheel
 	MaxPIDOutputLimits     = 15 * SteeringReductionRatio  // maximum pid output value (in degree)
 	MinPIDOutputLimits     = -15 * SteeringReductionRatio // minimum pid output value (in degree)
 	P                      = 0.0869670447979224           // Proportional coefficient

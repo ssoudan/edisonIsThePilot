@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:24:54
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-27 15:49:35
+* @Last Modified time: 2015-10-03 01:21:34
  */
 
 package main
@@ -36,9 +36,9 @@ import (
 var log = logger.Log("motorControl")
 
 type Options struct {
-	Clockwise bool   `short:"c" long:"clockwise" description:"clockwise rotation" default:"false"`
-	Speed     uint32 `short:"s" long:"speed" description:"rotation speed pps" default:"600"`
-	Duration  int64  `short:"d" long:"duration" description:"duration (seconds)" default:"1"`
+	Clockwise bool    `short:"c" long:"clockwise" description:"clockwise rotation" default:"false"`
+	Speed     uint32  `short:"s" long:"speed" description:"rotation speed pps" default:"600"`
+	Duration  float64 `short:"d" long:"duration" description:"duration (seconds)" default:"1"`
 }
 
 var opts Options

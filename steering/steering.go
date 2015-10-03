@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 17:40:00
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 15:36:08
+* @Last Modified time: 2015-10-03 11:03:57
  */
 
 package steering
@@ -34,7 +34,7 @@ var log = logger.Log("steering")
 
 const (
 	numberOfSteps                 = 200
-	rotationSpeedInStepPerSeconds = numberOfSteps // aka 1 rotation per second
+	rotationSpeedInStepPerSeconds = 2 * numberOfSteps // aka 2 rotation per second
 )
 
 type Motor struct {
