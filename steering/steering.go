@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 17:40:00
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-03 11:03:57
+* @Last Modified time: 2015-10-04 00:00:47
  */
 
 package steering
@@ -58,10 +58,11 @@ func New(actionner Actionner) *Motor {
 
 type message struct {
 	rotationInDegree float64
+	stayEnabled      bool
 }
 
-func NewMessage(rotationInDegree float64) interface{} {
-	return message{rotationInDegree: rotationInDegree}
+func NewMessage(rotationInDegree float64, stayEnabled bool) interface{} {
+	return message{rotationInDegree: rotationInDegree, stayEnabled: stayEnabled}
 }
 
 func (m *Motor) SetInputChan(c chan interface{}) {
@@ -85,10 +86,12 @@ func (m *Motor) processMotorState(msg message) {
 
 	rotationInDegree := msg.rotationInDegree
 
+	if !msg.stayEnabled {
+		defer m.actionner.Disable()
+	}
+
 	if rotationInDegree != 0. {
 		m.actionner.Enable()
-		defer m.actionner.Disable()
-
 		clockwise, speed, duration := rotationInDegreeToMove(rotationInDegree)
 
 		err := m.actionner.Move(clockwise, speed, duration)

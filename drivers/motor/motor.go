@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 18:58:22
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-03 01:06:53
+* @Last Modified time: 2015-10-03 22:41:26
  */
 
 package motor
@@ -61,7 +61,7 @@ func New(stepPin, stepPwmId, dirPin, sleepPin byte) *Motor {
 	err = dirGPIO.SetDirection(gpio.OUT)
 	check(err)
 
-	// Test Disabled and Enabled state for each LEDs
+	// Test Disabled and Enabled state for each pin
 	err = dirGPIO.Disable()
 	check(err)
 
@@ -78,7 +78,7 @@ func New(stepPin, stepPwmId, dirPin, sleepPin byte) *Motor {
 	err = sleepGPIO.SetDirection(gpio.OUT)
 	check(err)
 
-	// Test Disabled and Enabled state for each LEDs
+	// Test Disabled and Enabled state for each pin
 	err = sleepGPIO.Enable()
 	check(err)
 
@@ -146,15 +146,15 @@ func (m Motor) Move(clockwise bool, stepsBySecond uint32, duration time.Duration
 		return err
 	}
 
-	err = m.Enable()
-	if err != nil {
-		return err
-	}
+	// err = m.Enable()
+	// if err != nil {
+	// 	return err
+	// }
 	time.Sleep(duration)
-	err = m.Disable()
-	if err != nil {
-		return err
-	}
+	// err = m.Disable()
+	// if err != nil {
+	// 	return err
+	// }
 	err = m.stepPwm.Disable()
 	if err != nil {
 		return err

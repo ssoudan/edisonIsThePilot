@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:18:01
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-03 11:01:36
+* @Last Modified time: 2015-10-03 14:12:40
  */
 
 package conf
@@ -51,15 +51,23 @@ const (
 )
 
 const (
-	Bounds                 = 15.                          // error bound in degree
+	Bounds                 = 25.                          // error bound in degree
 	SteeringReductionRatio = 380 / 25                     // reduction ratio between the motor and the steering wheel
-	MaxPIDOutputLimits     = 15 * SteeringReductionRatio  // maximum pid output value (in degree)
-	MinPIDOutputLimits     = -15 * SteeringReductionRatio // minimum pid output value (in degree)
-	P                      = 0.0869670447979224           // Proportional coefficient
-	I                      = 7.00335119238032e-05         // Integrative coefficient
-	D                      = 21.9331758752948             // Derivative coefficient
-	N                      = 0.136075524385029            // Derivative filter coefficient
-
+	MaxPIDOutputLimits     = 25 * SteeringReductionRatio  // maximum pid output value (in degree)
+	MinPIDOutputLimits     = -25 * SteeringReductionRatio // minimum pid output value (in degree)
+	// P                      = 9.18171926287053             // Proportional coefficient
+	// I                      = 0.0130003678819562           // Integrative coefficient
+	// D                      = -164.135085176104            // Derivative coefficient
+	// N                      = 0.012781144762617            // Derivative filter coefficient
+	// pas mal
+	// P                              = 23.1581650671349   // Proportional coefficient
+	// I                              = 0.0661101312935837 // Integrative coefficient
+	// D                              = -298.747557060653  // Derivative coefficient
+	// N                              = 0.0251827953737387 // Derivative filter coefficient
+	P                              = 23.7945832658229   // Proportional coefficient
+	I                              = 0.0577564545857094 // Integrative coefficient
+	D                              = -119.221694540679  // Derivative coefficient
+	N                              = 0.0129089189498    // Derivative filter coefficient
 	GpsSerialPort                  = "/dev/ttyMFD1"
 	NoInputMessageTimeoutInSeconds = 10
 	MinimumSpeedInKnots            = 3

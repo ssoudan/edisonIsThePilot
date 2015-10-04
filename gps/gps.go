@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 17:13:41
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-29 10:21:43
+* @Last Modified time: 2015-10-03 23:15:41
  */
 
 package gps
@@ -116,7 +116,7 @@ func (g GPS) doReceiveGPSMessages() {
 				log.Error("Failed to parse FixQuality [%s] : %v", t.FixQuality, err)
 
 			} else {
-				log.Info("[GPGGA] fixQuality: %v \n", fix)
+				log.Info("[GPGGA] fixQuality: %v hdop: %s sat: %s\n", fix, t.HDOP, t.NumSatellites)
 				g.messagesChan <- pilot.FixStatus(fix)
 			}
 		case nmea.GPRMC:

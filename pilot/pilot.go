@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-29 19:32:19
+* @Last Modified time: 2015-10-03 23:08:40
  */
 
 package pilot
@@ -190,10 +190,11 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 				p.leds[dashboard.CorrectionAtLimit] = true
 			}
 
-			p.steeringChan <- steering.NewMessage(headingControl)
+			p.steeringChan <- steering.NewMessage(headingControl, true)
 
 		} else {
 			log.Notice("Steering Disabled")
+			p.steeringChan <- steering.NewMessage(0, false)
 		}
 	} else {
 		////////////////////////
@@ -208,6 +209,8 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 		p.leds[dashboard.SpeedTooLow] = bool(speedAlarm)
 		p.leds[dashboard.CorrectionAtLimit] = false // Doesn't make sense when disabled
 
+		// make sure the steering is disabled
+		p.steeringChan <- steering.NewMessage(0, false)
 		////////////////////////
 		// </This section is updated when the pilot is not enabled>
 		////////////////////////
@@ -218,12 +221,16 @@ func (p *Pilot) updateAfterTimeout() {
 	if p.enabled {
 		p.alarm = RAISED
 		p.leds[dashboard.NoGPSFix] = true
+		// make sure the steering is disabled
+		p.steeringChan <- steering.NewMessage(0, false)
 	}
 }
 
 func (p *Pilot) updateAfterError() {
 	if p.enabled {
 		p.alarm = RAISED
+		// make sure the steering is disabled
+		p.steeringChan <- steering.NewMessage(0, false)
 	}
 }
 

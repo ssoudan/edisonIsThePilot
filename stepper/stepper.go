@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-29 10:43:34
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-29 23:03:11
+* @Last Modified time: 2015-10-03 23:01:03
  */
 
 package stepper
@@ -206,11 +206,13 @@ func (d *Stepper) processGPSMessage(m pilot.GPSFeedBackAction) {
 		d.plan.Start = JSONTime(now)
 
 		// send message to steering -- that's where we punch the system
-		d.steeringChan <- steering.NewMessage(d.plan.Input.Step)
+		d.steeringChan <- steering.NewMessage(d.plan.Input.Step, true)
 
 	case RUNNING:
 		d.plan.Points = append(d.plan.Points, Point{
 			Timestamp:      JSONTime(now),
+			Fix_date:       m.Date,
+			Fix_time:       m.Time,
 			Course:         m.Heading,
 			Speed:          m.Speed,
 			Delta_steering: 0,
@@ -232,6 +234,9 @@ func (d *Stepper) processGPSMessage(m pilot.GPSFeedBackAction) {
 
 			// tell the pilot the calibration test is over and data can be collected
 			log.Notice("The bump test is over. You can disable the autopilot, stop the program and start another test.")
+
+			d.steeringChan <- steering.NewMessage(0, false)
+
 			d.plan.State = DONE
 		}
 	case DONE:

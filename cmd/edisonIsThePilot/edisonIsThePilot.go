@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-30 12:45:08
+* @Last Modified time: 2015-10-03 22:51:13
  */
 
 package main
@@ -74,6 +74,16 @@ func main() {
 			} else {
 				log.Error("Failed to raise the alarm")
 			}
+			// The motor
+			motor := motor.New(
+				conf.MotorStepPin,
+				conf.MotorStepPwm,
+				conf.MotorDirPin,
+				conf.MotorSleepPin)
+			if err := motor.Disable(); err != nil {
+				log.Error("Failed to stop the motor")
+			}
+			motor.Unexport()
 
 			log.Fatalf("Version %v -- Received a panic error -- exiting: %v", Version, m)
 		}
@@ -204,6 +214,7 @@ func main() {
 		conf.MotorStepPwm,
 		conf.MotorDirPin,
 		conf.MotorSleepPin)
+	defer motor.Disable()
 	defer motor.Unexport()
 
 	// The alarm
