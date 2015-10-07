@@ -1,0 +1,18 @@
+[Unit]
+Description=Edison Is The Pilot
+After=rc-local.service
+Before=systemd-user-sessions.service
+ 
+[Service]
+Type=simple
+RemainAfterExit=false
+ExecStartPre=/home/root/ledControl
+ExecStart=/home/root/edisonIsThePilot
+ExecStopPost=/home/root/ledControl
+Environment="HOME=/home/root"
+WorkingDirectory=/home/root/
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

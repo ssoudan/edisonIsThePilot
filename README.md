@@ -1,6 +1,9 @@
 # edisonIsThePilot
 
-<a href="mailto:sebastien.soudan@gmail.com">Sebastien Soudan</a>
+You can find the latest version <a href="https://github.com/ssoudan/edisonIsThePilot">here</a>.
+
+<a href="https://github.com/ssoudan">Sebastien Soudan</a> --
+<a href="https://github.com/philixxx">Philippe Martinez</a>
 
 This is intended to become an autopilot at some point.
 
@@ -8,7 +11,7 @@ For more information about the design check [this](DESIGN.md).
 
 ## Build the toolchain
 
-Useful in case you are on Mac:
+Useful in case you are on Mac and want to build go toolchain for linux x86:
 
 	$ cd $GOROOT/src
 	$ export GOROOT_BOOTSTRAP=$GOROOT
@@ -16,10 +19,16 @@ Useful in case you are on Mac:
 
 ## Build the project
 
-    $ GOARCH=386 GOOS=linux go get
+    $ GOARCH=386 GOOS=linux go get ./...
 	$ GOARCH=386 GOOS=linux go build cmd/edisonIsThePilot/edisonIsThePilot.go
 	$ scp edisonIsThePilot root@edison.local.:
 
+or you use the Makefile.
+
+    $ make 
+    $ make deploy 
+
+to build and copy everything to edison.local. Note this will also add a systemd service and start it.
 
 ## Licensing
 Under Apache License v2.
