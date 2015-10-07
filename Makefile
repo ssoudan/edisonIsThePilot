@@ -32,8 +32,8 @@ GOFMT=gofmt -w
 # Package lists
 TOPLEVEL_PKG := github.com/ssoudan/edisonIsThePilot
 INT_LIST :=  #<-- Interface directories
-IMPL_LIST := conf control alarm dashboard pilot gps steering drivers/pwm drivers/gpio drivers/compass/hmc drivers/compass drivers/motor  infrastructure/logger infrastructure/pid  #<-- Implementation directories
-CMD_LIST := cmd/edisonIsThePilot cmd/motorControl cmd/ledControl cmd/motorCalibration cmd/alarmControl #<-- Command directories
+IMPL_LIST := conf control alarm dashboard pilot gps steering stepper drivers/pwm drivers/gpio drivers/motor  infrastructure/logger infrastructure/pid  #<-- Implementation directories
+CMD_LIST := cmd/edisonIsThePilot cmd/mario cmd/systemCalibration cmd/motorControl cmd/ledControl cmd/motorCalibration cmd/alarmControl #<-- Command directories
 
 # List building
 ALL_LIST = $(INT_LIST) $(IMPL_LIST) $(CMD_LIST)
@@ -58,7 +58,7 @@ fmt: $(FMT_LIST)
 deploy: build test
 	$(SSH) systemctl stop edisonIsThePilot
 	sleep 3
-	$(SCP) edisonIsThePilot motorControl alarmControl ledControl motorCalibration edisonIsThePilot.service root@edison.local.:
+	$(SCP) mario edisonIsThePilot motorControl systemCalibration alarmControl ledControl motorCalibration edisonIsThePilot.service root@edison.local.:
 	$(SSH) cp edisonIsThePilot.service /lib/systemd/system
 	$(SSH) systemctl daemon-reload
 	$(SSH) systemctl start edisonIsThePilot

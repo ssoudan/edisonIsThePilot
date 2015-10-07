@@ -16,37 +16,21 @@ under the License.
 
 /*
 * @Author: Sebastien Soudan
-* @Date:   2015-09-21 22:49:13
+* @Date:   2015-09-28 22:13:28
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 14:04:40
+* @Last Modified time: 2015-09-28 22:16:04
  */
 
-package pilot
+package webserver
 
 import (
-	"github.com/ssoudan/edisonIsThePilot/conf"
-
-	"github.com/stretchr/testify/assert"
-
-	"testing"
+	"fmt"
+	"io"
+	"net/http"
 )
 
-func TestCheckSpeedErrorRaisesAnAlarmWhenTooSlow(t *testing.T) {
-
-	input := conf.MinimumSpeedInKnots * 0.9
-	alarm := checkSpeedError(input)
-
-	expected := RAISED
-
-	assert.EqualValues(t, expected, alarm)
-}
-
-func TestCheckSpeedErrorDoNotRaiseAnAlarmWhenLargeEnough(t *testing.T) {
-
-	input := conf.MinimumSpeedInKnots * 1.1
-	alarm := checkSpeedError(input)
-
-	expected := UNRAISED
-
-	assert.EqualValues(t, expected, alarm)
+func VersionEndpoint(version string) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, fmt.Sprintf("Edison is the pilot - %s", version))
+	}
 }

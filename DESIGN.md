@@ -1,22 +1,33 @@
 
 # Autopilot Design
 
-<a href="https://github.com/ssoudan">Sebastien Soudan</a>
+You can find the latest version <a href="https://github.com/ssoudan/edisonIsThePilot">here</a>.
+
+<a href="https://github.com/ssoudan">Sebastien Soudan</a> --
 <a href="https://github.com/philixxx">Philippe Martinez</a>
 
-## Table of Contrent
+## Table of Content
 
 <!-- MarkdownTOC -->
 
+- 0 -- To do
 - 1 -- Problem statement
 - 2 -- System Design
 - 3 -- Heading Control Autopilot
 
 <!-- /MarkdownTOC -->
 
+## 0 -- To do
+
+- FUTURE(?) LED that tell the system is powered
+- FUTURE(?) LED that tell the system is running (heartbeat)
+- FUTURE(?) Proper AP mode with the wifi  
+
 ## 1 -- Problem statement
 
 For now, we want **a system that can hold the heading by acting on the rudder**.
+
+DISCLAIMER -- this can hurt and/or cause plenty of other things you don't want. Don't use it unless that's what your are after!
 
 ### 1.1 Requirements
 
@@ -49,8 +60,8 @@ The Internet plus few other things.
 We don't know the declination so the GPS heading and the compass heading will be slightly different.
 
 The compass is sensitive to angular variation though the gyroscope can help to compensate for that.
-The compass is also sensitive to the alignement with the movement direction.
-The GPS does not provide a meangingful heading when the speed is not enough.
+The compass is also sensitive to the alignment with the movement direction.
+The GPS does not provide a meaningful heading when the speed is too low.
 
 
 #### 1.3.2 HMC5883L
@@ -116,13 +127,20 @@ Thus, for the inital iteration, we will focus on the heading control autopilot d
                       \-------| compass/gps? |<----------------------/
                               |--------------|
 
-// TODO(ssoudan) need to figure out how the steering wheel/rudder system works.
+We assume the rudder system to be an integrating system.
 
     [Rudder system]
     steering     |------| rudder angle
-    -----------> |   K  | ----------->
+    -----------> | Kr/s | ----------->
     angle        |------|
                  
+
+The boat is assumed to an integrating system as well:
+
+    [Boat]
+    rudder angle |-------|  heading
+    -----------> |  Kb/s | ----------->
+                 |-------|
 
 ## 3 -- Heading Control Autopilot
 
@@ -135,28 +153,29 @@ Let's go over requirements of section 1.1.
 - emergency disconnect: the stepper motor will be 'sleeping' mode (no holding torque) all the time but when it is actually driving the motor - two switches will be available: one to enable/disable the autopilot (soft), one to power on/off the system. When the system is powered off, there is no holding torque from the motor either.
 - powerful enough actuator: stepper motor with adjustable torque (current limiting on the stepper driver board)
 - as little button as possible: 2 ON/OFF switches
-- ability to tune/calibrate the system on-board: TODO
+- ability to tune/calibrate the system on-board: 
   - sinusoidal steering wheel input of know amplitude and frequency -- for different frequencies
   - record/export track
   - ability to change the parameters
 
 *Note:* it would be nice to be able to disable the feedback to be able to experimentally identify the dynamic characteristic of rudder-boat system and tune the PID controller from that. 
 
-- Be able to have a sinusoidal steering input of know amplitude
+- Be able to have a step steering input of know amplitude
 - Measure the track
 - Be able to export data
 
-Not implemented yet.
+This is implemented in 'cmd/systemCalibration' and exports a JSON with the results to the filesystem or an HTTP endpoint.
+The output need to be further processed to extract the characteristics of the steering+boat system in order to tune the PID controller.
 
 ### 3.2 Subsystems
 
 #### 3.2.1 Heading measurement
-Seems that compass calibration might be required here to prevent non-linear behaviors. It is sensible to pitch and roll and would require a gyro to compensate for this. Also it is sensible to magnetic environnement and would require to be located as far as possible of the engine.
+Seems that compass calibration might be required here to prevent non-linear behaviors. It is sensible to pitch and roll and would require a gyro to compensate for this. Also it is sensible to magnetic environment and would require to be located as far as possible of the engine.
 
-The utilisation of a GPS to get the heading also brings some constraints but we will investiguate this way.
+The utilisation of a GPS to get the heading also brings some constraints but we will investigate this way.
 
 #### 3.2.2 Rudder control
-For now, we will assume we don't need a closed-loop control system here and the existing steering chain is fine. But we need to make sure there is as little  slackness as possible in the chain made of the motor, the steering wheel, and the rudder.
+For now, we will assume we don't need a closed-loop control system here and the existing steering chain is fine. But we need to make sure there is as little play as possible in the chain made of the motor, the steering wheel, and the rudder.
 
 The stepper motor is driven at constant speed for a duration which depends on the requested rotation. Direction of the rotation is defined when the movement is requested. Positive rotation are made in clockwise direction (for the motor). 
 
@@ -183,7 +202,7 @@ We need to support:
 - be able to read from GPIO (button)
 
 We will use an Intel Edison for this project, and can write Golang for this platform. We will need to find a couple of libraries to help us.
-The main reason for this choice is because we can write Golang. The second reason is because it is the first time I play with this platform. The third reason (which is the first reasonable reason) is beacuse the Linux, x86 architecture, 1GB of ram and on-board wifi plus all the IO pins make it a quite evolutive platform for the job. Would be relatively easy to add mapping, remote control, AIS traffic monitoring features, or a GUI...
+The main reason for this choice is because we can write Golang. The second reason is because it is the first time I play with this platform. The third reason (which is the first reasonable reason) is because the Linux, x86 architecture, 1GB of ram and on-board wifi plus all the IO pins make it a quite evolutive platform for the job. Would be relatively easy to add mapping, remote control, AIS traffic monitoring features, or a GUI...
 
 Note the Edison's wifi has an [AP mode](https://software.intel.com/en-us/getting-started-with-ap-mode-for-intel-edison-board).
 
@@ -342,13 +361,13 @@ To check the status of the service:
 
     # systemctl status edisonIsThePilot -l
 
-##### Integration with the OS watchdog
-<!-- TODO(ssoudan) integration with watchdog -->
+<!-- ##### Integration with the OS watchdog -->
+<!-- FUTURE(ssoudan) integration with watchdog -->
 
 #### Log rotation
 <!-- `edisonIsThePilot` writes both to stderr and '/var/log/edisonIsThePilot.log'. When the program is started or when the size of the file gets greater than 40MB (check performed every `logger.maxWriteCountWithoutCheck` writes), 
 the file is rotated to /var/log/edisonIsThePilot.log.old (previous edisonIsThePilot.log.old is deleted) and a new '/var/log/edisonIsThePilot.log' is created. -->
-Logs are managed by journalctl.
+Logs are managed by journalctl. It's configuration is changed to limit the maximum amount of logs it keeps.
 
 They can be watched with: 
 
@@ -364,25 +383,51 @@ For the other components (GPS and level shifters), we have 2 regulators on the b
 
 #### 3.4.9 Security
 
-<!-- TODO(ssoudan) -->
-- operating conditions
-- disengagement
-- alarm condition
-- handling of recoverable errors
+When the pilot is enabled and detect an error or an over limit condition, the alarm is raised and the (autopilot) steering is disabled. Whenever the system is rebooted/restarted, the alarm is raised before the autopilot is operational (continuous beep) and continues to beep if the autopilot enabled button is ON when it starts. 
 
 ### 3.5 Tests and Validation
-<!-- TODO(ssoudan) -->
+
+We have:
+
+- unit/behavorial tests
+- standalone programs to test different subsystems that have been used to test the board and its actuators on a bench
+- matlab simulations to validate the feasibility of the entire system under some assumptions about the boat and steering chain behavior.
 
 ### 3.5.1 Boundaries 
 
-<!-- TODO(ssoudan) -->
+We have different thresholds for that:
+
+- minimum speed -> to cover for inaccurate gps heading
+- maximum control angle -> to prevent to rapid correction which could be dangerous
+- maximum allowable error -> to detect instabilities and alert the pilot.
+
+### 3.6 Calibration procedure
+
+The purpose of this calibration is to measure the behavior of the controlled system, assess its linearity, and find the parameters of the model that describe it.
+We essentially need to figure out the values of Kb*Kr in Kb*Kr/s^2 transfer function.
+For that we rely on the impulse response of this subsystem as describe in the next section.
+
+#### 3.6.1 Impulse response
+
+Using 'systemCalibration' which is made of the 'steering' and 'gps' components only.
+
+We first need to make sure 'edisonIsThePilot' service is down.
+Then ensure we have enough place for the operation.
+
+Once the boat is going straight at constant speed (cruising speed):
+- note the heading of the boat
+- start a stopwatch when X degree of steering motor (corresponding to a certain number of steering degree depending on the reduction ratio the motor/pulley/wheel system) is added as fast a possible - hold this steering
+- every seconds, note the heading of the boat
+
+'systemCalibration' does this procedure automatically.
+
+To test the linearity of the system, multiple such campaign need to be performed for different values of X, on both side and multiple speed if that's relevant.
+
+#### 3.6.2 Frequency response
+
+FUTURE(ssoudan) in the future we might want to do that, but since we don't know the range of frequency of the perturbation we can see we will delay that.
 
 
-### 3.6 Missing parts
 
-- fuse
-- 12v regulator
-- spare parts
-- labels
-- case
+
 

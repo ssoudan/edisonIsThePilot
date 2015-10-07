@@ -6,8 +6,9 @@ Before=systemd-user-sessions.service
 [Service]
 Type=simple
 RemainAfterExit=false
-ExecPreStart=/home/root/ledControl
+ExecStartPre=/home/root/ledControl
 ExecStart=/home/root/edisonIsThePilot
+ExecStopPost=/home/root/ledControl
 Environment="HOME=/home/root"
 WorkingDirectory=/home/root/
 Restart=always

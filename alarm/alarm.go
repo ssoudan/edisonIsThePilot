@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 15:42:21
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 15:35:16
+* @Last Modified time: 2015-09-29 12:31:14
  */
 
 package alarm
@@ -74,7 +74,7 @@ func (d *Alarm) Enabled() bool {
 	return d.alarmState
 }
 
-func (d Alarm) processAlarmState() {
+func (d *Alarm) processAlarmState() {
 
 	// NOTE: already hold the WLock
 
@@ -106,7 +106,7 @@ func (d *Alarm) processMessage(m message) {
 }
 
 // Shutdown sets all the state to down and notify the handlers
-func (d Alarm) Shutdown() {
+func (d *Alarm) Shutdown() {
 
 	d.shutdownChan <- 1
 	<-d.shutdownChan

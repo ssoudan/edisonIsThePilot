@@ -9,7 +9,7 @@ of the License at
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-WARRANTIES OR CONDITIONS OF ANY KIND, either express or impliem. See the
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 License for the specific language governing permissions and limitations
 under the License.
 */
@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 17:40:00
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 15:36:08
+* @Last Modified time: 2015-10-04 00:00:47
  */
 
 package steering
@@ -34,7 +34,7 @@ var log = logger.Log("steering")
 
 const (
 	numberOfSteps                 = 200
-	rotationSpeedInStepPerSeconds = numberOfSteps // aka 1 rotation per second
+	rotationSpeedInStepPerSeconds = 2 * numberOfSteps // aka 2 rotation per second
 )
 
 type Motor struct {
@@ -58,10 +58,11 @@ func New(actionner Actionner) *Motor {
 
 type message struct {
 	rotationInDegree float64
+	stayEnabled      bool
 }
 
-func NewMessage(rotationInDegree float64) interface{} {
-	return message{rotationInDegree: rotationInDegree}
+func NewMessage(rotationInDegree float64, stayEnabled bool) interface{} {
+	return message{rotationInDegree: rotationInDegree, stayEnabled: stayEnabled}
 }
 
 func (m *Motor) SetInputChan(c chan interface{}) {
@@ -85,10 +86,12 @@ func (m *Motor) processMotorState(msg message) {
 
 	rotationInDegree := msg.rotationInDegree
 
+	if !msg.stayEnabled {
+		defer m.actionner.Disable()
+	}
+
 	if rotationInDegree != 0. {
 		m.actionner.Enable()
-		defer m.actionner.Disable()
-
 		clockwise, speed, duration := rotationInDegreeToMove(rotationInDegree)
 
 		err := m.actionner.Move(clockwise, speed, duration)

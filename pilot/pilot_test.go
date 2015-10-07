@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 13:12:38
+* @Last Modified time: 2015-09-29 10:49:00
  */
 
 package pilot
@@ -32,23 +32,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type testConstroller struct {
+type testController struct {
 	sp        float64
 	lastValue float64
 }
 
-func (c *testConstroller) Set(sp float64) {
+func (c *testController) Set(sp float64) {
 	log.Info("Set has been called with %v", sp)
 	c.sp = sp
 }
 
-func (c *testConstroller) Update(value float64) float64 {
+func (c *testController) Update(value float64) float64 {
 	log.Info("Update has been called with %v", value)
 	c.lastValue = value
 	return 2.
 }
 
-func (c testConstroller) OutputLimits() (float64, float64) {
+func (c testController) OutputLimits() (float64, float64) {
 	return -10, 10
 }
 
@@ -147,7 +147,7 @@ func TestThatHeadingIsSetWithFirstGPSHeadingAfterItHasBeenEnabled(t *testing.T) 
 		alarmChan:     c,
 		steeringChan:  c,
 		inputChan:     make(chan interface{}),
-		pid:           &testConstroller{}}
+		pid:           &testController{}}
 
 	// pilot.Start()
 	pilot.enable()
@@ -182,7 +182,7 @@ func TestThatPIDControllerIsUpdatedWhenThePilotIsEnabled(t *testing.T) {
 	INIT_SP := -2.
 	INIT_VALUE := -1.
 
-	controller := testConstroller{sp: INIT_SP, lastValue: INIT_VALUE}
+	controller := testController{sp: INIT_SP, lastValue: INIT_VALUE}
 
 	pilot := Pilot{
 		alarm:         UNRAISED,
@@ -256,7 +256,7 @@ func TestThatTimeoutRaiseTheAlarm(t *testing.T) {
 		alarmChan:     c,
 		steeringChan:  c,
 		inputChan:     make(chan interface{}),
-		pid:           &testConstroller{}}
+		pid:           &testController{}}
 
 	pilot.disable()
 
@@ -302,7 +302,7 @@ func TestThatOutOfBoundsGPSInputRaisesAnAlarm(t *testing.T) {
 		alarmChan:     c,
 		steeringChan:  c,
 		inputChan:     make(chan interface{}),
-		pid:           &testConstroller{}}
+		pid:           &testController{}}
 
 	// pilot.Start()
 	pilot.enable()
@@ -331,7 +331,7 @@ func checkHeadingCase(t *testing.T, c headingCase) {
 	pilot := Pilot{heading: c.heading}
 
 	expected := c.expected
-	result := computeHeadingError(pilot.heading, c.gpsHeading)
+	result := ComputeHeadingError(pilot.heading, c.gpsHeading)
 
 	assert.EqualValues(t, expected, result, fmt.Sprintf("\"%s\" case failed", c.description))
 }

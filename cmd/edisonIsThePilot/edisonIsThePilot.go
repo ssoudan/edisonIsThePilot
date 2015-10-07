@@ -18,14 +18,12 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-26 17:56:51
+* @Last Modified time: 2015-10-03 22:51:13
  */
 
 package main
 
 import (
-	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -40,6 +38,7 @@ import (
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/pid"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/utils"
+	"github.com/ssoudan/edisonIsThePilot/infrastructure/webserver"
 	"github.com/ssoudan/edisonIsThePilot/pilot"
 	"github.com/ssoudan/edisonIsThePilot/steering"
 )
@@ -47,10 +46,6 @@ import (
 var log = logger.Log("edisonIsThePilot")
 
 var Version = "unknown"
-
-func hello(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, fmt.Sprintf("Edison is the pilot - %s", Version))
-}
 
 func main() {
 	log.Info("Starting -- version %s", Version)
@@ -79,6 +74,16 @@ func main() {
 			} else {
 				log.Error("Failed to raise the alarm")
 			}
+			// The motor
+			motor := motor.New(
+				conf.MotorStepPin,
+				conf.MotorStepPwm,
+				conf.MotorDirPin,
+				conf.MotorSleepPin)
+			if err := motor.Disable(); err != nil {
+				log.Error("Failed to stop the motor")
+			}
+			motor.Unexport()
 
 			log.Fatalf("Version %v -- Received a panic error -- exiting: %v", Version, m)
 		}
@@ -91,7 +96,7 @@ func main() {
 			}
 		}()
 
-		http.HandleFunc("/", hello)
+		http.HandleFunc("/", webserver.VersionEndpoint(Version))
 		err := http.ListenAndServe(":8000", nil)
 		if err != nil {
 			log.Panic("Already running! or something is living on port 8000 - exiting")
@@ -148,9 +153,9 @@ func main() {
 		return g
 	}
 	dashboardGPIOs := make(map[string]gpio.Gpio, len(conf.MessageToPin))
-	for k, v := range conf.MessageToPin {
-		g := mapMessageToGPIO(k, v)
-		dashboardGPIOs[k] = g
+	for _, v := range conf.MessageToPin {
+		g := mapMessageToGPIO(v.Message, v.Pin)
+		dashboardGPIOs[v.Message] = g
 	}
 	defer func() {
 		for _, g := range dashboardGPIOs {
@@ -209,6 +214,7 @@ func main() {
 		conf.MotorStepPwm,
 		conf.MotorDirPin,
 		conf.MotorSleepPin)
+	defer motor.Disable()
 	defer motor.Unexport()
 
 	// The alarm

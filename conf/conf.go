@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:18:01
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-27 13:56:13
+* @Last Modified time: 2015-10-07 17:35:04
  */
 
 package conf
@@ -27,34 +27,38 @@ import (
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
 )
 
-var MessageToPin = map[string]byte{
-	dashboard.NoGPSFix:                43, // J19 - pin 11
-	dashboard.InvalidGPSData:          48, // J19 - pin 6
-	dashboard.SpeedTooLow:             40, // J19 - pin 10
-	dashboard.HeadingErrorOutOfBounds: 82, // J19 - pin 13
-	dashboard.CorrectionAtLimit:       83, // J19 - pin 14
+type MessagePin struct {
+	Message string
+	Pin     byte
+}
+
+var MessageToPin = []MessagePin{
+	{dashboard.NoGPSFix, 43},                // J19 - pin 11
+	{dashboard.InvalidGPSData, 48},          // J19 - pin 6
+	{dashboard.SpeedTooLow, 40},             // J19 - pin 10
+	{dashboard.HeadingErrorOutOfBounds, 82}, // J19 - pin 13
+	{dashboard.CorrectionAtLimit, 83},       // J19 - pin 14
 }
 
 const (
 	AlarmGpioPin  = 183 // J18 - pin 8
-	AlarmGpioPWM  = 3
+	AlarmGpioPWM  = 3   // corresponding pwm number
 	MotorDirPin   = 165 // J18 - pin 2
 	MotorSleepPin = 12  // J18 - pin 7
 	MotorStepPin  = 182 // J17 - pin 1
-	MotorStepPwm  = 2
-	SwitchGpioPin = 46 // J19 - pin 5
+	MotorStepPwm  = 2   // corresponding pwm number
+	SwitchGpioPin = 46  // J19 - pin 5
 )
 
 const (
-	// TODO(ssoudan) these figures need to be scaled with the reduction factor of the transmission
-	Bounds             = 15.
-	MaxPIDOutputLimits = 15
-	MinPIDOutputLimits = -15
-	P                  = 0.0870095459081994
-	I                  = 7.32612847120554e-05
-	D                  = 22.0896577752675
-	N                  = 0.25625893108953
-
+	Bounds                         = 25.                          // error bound in degree
+	SteeringReductionRatio         = 380 / 25                     // reduction ratio between the motor and the steering wheel
+	MaxPIDOutputLimits             = 25 * SteeringReductionRatio  // maximum pid output value (in degree)
+	MinPIDOutputLimits             = -25 * SteeringReductionRatio // minimum pid output value (in degree)
+	P                              = 0.104659039843542            // Proportional coefficient
+	I                              = 8.06799673280568e-05         // Integrative coefficient
+	D                              = 27.8353089535829             // Derivative coefficient
+	N                              = 1.23108985822891             // Derivative filter coefficient
 	GpsSerialPort                  = "/dev/ttyMFD1"
 	NoInputMessageTimeoutInSeconds = 10
 	MinimumSpeedInKnots            = 3

@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-25 16:06:30
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-25 16:40:40
+* @Last Modified time: 2015-09-30 14:34:47
  */
 
 package pid
@@ -259,11 +259,16 @@ var simout = []float64{
 
 func TestThatPIDOutputMatchesTheSimulation(t *testing.T) {
 
+	P := 0.0870095459081994   // Proportional coefficient
+	I := 7.32612847120554e-05 // Integrative coefficient
+	D := 22.0896577752675     // Derivative coefficient
+	N := 0.25625893108953     // Derivative filter coefficient
+
 	pidController := New(
-		conf.P,
-		conf.I,
-		conf.D,
-		conf.N,
+		P,
+		I,
+		D,
+		N,
 		conf.MinPIDOutputLimits,
 		conf.MaxPIDOutputLimits)
 

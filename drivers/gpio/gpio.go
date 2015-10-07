@@ -77,7 +77,7 @@ func (p Gpio) Unexport() error {
 	return writeTo("/sys/class/gpio/unexport", fmt.Sprintf("%d", p.pin))
 }
 
-// SetDirection defines wether this particular GPIO is used for input or output (use constants IN and OUT).
+// SetDirection defines whether this particular GPIO is used for input or output (use constants IN and OUT).
 func (p Gpio) SetDirection(dir string) error {
 	if dir != IN && dir != OUT {
 		return fmt.Errorf("Incorrect direction: %s", dir)

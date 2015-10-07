@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 17:13:41
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 15:35:59
+* @Last Modified time: 2015-10-03 23:15:41
  */
 
 package gps
@@ -116,22 +116,26 @@ func (g GPS) doReceiveGPSMessages() {
 				log.Error("Failed to parse FixQuality [%s] : %v", t.FixQuality, err)
 
 			} else {
-				log.Info("[GPGGA] fixQuality: %v \n", fix)
+				log.Info("[GPGGA] fixQuality: %v hdop: %s sat: %s\n", fix, t.HDOP, t.NumSatellites)
 				g.messagesChan <- pilot.FixStatus(fix)
 			}
 		case nmea.GPRMC:
 			log.Info("[GPRMC] validity: %v heading: %v[˚] speed: %v[knots] \n", t.Validity == "A", t.Course, t.Speed)
 			g.messagesChan <- pilot.GPSFeedBackAction{
-				Heading:  t.Course,
-				Validity: t.Validity == "A",
-				Speed:    t.Speed,
+				Heading:   t.Course,
+				Validity:  t.Validity == "A",
+				Speed:     t.Speed,
+				Longitude: t.Longitude,
+				Latitude:  t.Latitude,
+				Date:      t.Date,
+				Time:      t.Time,
 			}
 		}
 	}
 }
 
 // Start creates an infinite go routine which will try to open the serial port to the GPS
-// and parse the input to delive sentences or errors on the respective channels.
+// and parse the input to deliver sentences or errors on the respective channels.
 func (g GPS) Start() {
 
 	go func() {

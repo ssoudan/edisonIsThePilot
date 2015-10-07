@@ -9,7 +9,7 @@ of the License at
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-WARRANTIES OR CONDITIONS OF ANY KIND, either express or impliec. See the
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 License for the specific language governing permissions and limitations
 under the License.
 */
@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 11:55:49
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-25 12:16:46
+* @Last Modified time: 2015-09-30 12:37:27
  */
 
 package control
@@ -33,11 +33,10 @@ var log = logger.Log("control")
 
 type Control struct {
 	controlHandler Readable
-	pilot          Enablable
+	target         Enablable
 	stateEnable    bool
 
 	// channels
-	pilotChan    chan interface{}
 	shutdownChan chan interface{}
 	panicChan    chan interface{}
 }
@@ -51,8 +50,8 @@ type Readable interface {
 	Value() (bool, error)
 }
 
-func New(controlHandler Readable, pilot Enablable) *Control {
-	return &Control{controlHandler: controlHandler, pilot: pilot, shutdownChan: make(chan interface{})}
+func New(controlHandler Readable, target Enablable) *Control {
+	return &Control{controlHandler: controlHandler, target: target, shutdownChan: make(chan interface{})}
 }
 
 func (c *Control) SetPanicChan(p chan interface{}) {
@@ -70,12 +69,12 @@ func (c *Control) updateControlState() error {
 
 	if state != c.stateEnable {
 		if state {
-			log.Warning("Enabling the pilot")
-			err = c.pilot.Enable()
+			log.Warning("Enabling the target")
+			err = c.target.Enable()
 
 		} else {
-			log.Warning("Disabling the pilot")
-			err = c.pilot.Disable()
+			log.Warning("Disabling the target")
+			err = c.target.Disable()
 		}
 
 		if err == nil {
