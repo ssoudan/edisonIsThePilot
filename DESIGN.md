@@ -127,15 +127,15 @@ Thus, for the inital iteration, we will focus on the heading control autopilot d
                       \-------| compass/gps? |<----------------------/
                               |--------------|
 
-We assume the rudder system to be linear.
+We assume the rudder system to be an integrating system.
 
     [Rudder system]
     steering     |------| rudder angle
-    -----------> |   K  | ----------->
+    -----------> | Kr/s | ----------->
     angle        |------|
                  
 
-The boat is assumed to an integrating system:
+The boat is assumed to an integrating system as well:
 
     [Boat]
     rudder angle |-------|  heading
@@ -404,8 +404,10 @@ We have different thresholds for that:
 ### 3.6 Calibration procedure
 
 The purpose of this calibration is to measure the behavior of the controlled system, assess its linearity, and find the parameters of the model that describe it.
+We essentially need to figure out the values of Kb*Kr in Kb*Kr/s^2 transfer function.
+For that we rely on the impulse response of this subsystem as describe in the next section.
 
-#### 3.6.1 Step response
+#### 3.6.1 Impulse response
 
 Using 'systemCalibration' which is made of the 'steering' and 'gps' components only.
 
@@ -414,7 +416,7 @@ Then ensure we have enough place for the operation.
 
 Once the boat is going straight at constant speed (cruising speed):
 - note the heading of the boat
-- start a stopwatch when X degree of steering is added as fast a possible - hold this steering
+- start a stopwatch when X degree of steering motor (corresponding to a certain number of steering degree depending on the reduction ratio the motor/pulley/wheel system) is added as fast a possible - hold this steering
 - every seconds, note the heading of the boat
 
 'systemCalibration' does this procedure automatically.
