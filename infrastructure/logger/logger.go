@@ -18,13 +18,14 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-03-31 21:34:39
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-18 17:53:46
+* @Last Modified time: 2015-09-24 14:21:04
  */
 
 package logger
 
 import (
 	"github.com/op/go-logging"
+
 	"os"
 )
 
@@ -33,18 +34,18 @@ func Log(name string) *logging.Logger {
 }
 
 func init() {
-	format := logging.MustStringFormatter(
+	colorFormat := logging.MustStringFormatter(
 		"%{color:bold}%{time:15:04:05.000} %{level:-6s} [%{module}] %{shortfunc:.10s} ▶ %{id:03x}%{color:reset} %{message}",
 	)
 
 	backend := logging.NewLogBackend(os.Stderr, "", 0)
 
-	backendFormatter := logging.NewBackendFormatter(backend, format)
+	backendFormatter := logging.NewBackendFormatter(backend, colorFormat)
 
 	// Only errors and more severe messages should be sent to backend1
 	backendLeveled := logging.AddModuleLevel(backendFormatter)
-	backendLeveled.SetLevel(logging.INFO, "")
+	backendLeveled.SetLevel(logging.DEBUG, "")
 
-	// Set the backends to be used.
 	logging.SetBackend(backendLeveled)
+	return
 }

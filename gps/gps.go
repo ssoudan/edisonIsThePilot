@@ -18,16 +18,19 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 17:13:41
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-18 17:53:42
+* @Last Modified time: 2015-10-03 23:15:41
  */
 
 package gps
 
 import (
 	"bufio"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
+	"github.com/ssoudan/edisonIsThePilot/pilot"
 
 	"github.com/adrianmo/go-nmea"
 	"github.com/tarm/serial"
@@ -38,40 +41,115 @@ var log = logger.Log("gps")
 type GPS struct {
 	deviceName string
 	baud       int
+
+	// channels
+	messagesChan chan interface{}
+	errorChan    chan interface{}
+	panicChan    chan interface{}
 }
 
+// New creates a new GPS component
 func New(deviceName string) GPS {
 	return GPS{deviceName: deviceName, baud: 9600}
 }
 
-func (g GPS) Stream() (chan nmea.SentenceI, chan error) {
-	messagesChan := make(chan nmea.SentenceI)
-	errorChan := make(chan error)
+func (g *GPS) SetMessagesChan(c chan interface{}) {
+	g.messagesChan = c
+}
 
+func (g *GPS) SetErrorChan(c chan interface{}) {
+	g.errorChan = c
+}
+
+func (g *GPS) SetPanicChan(c chan interface{}) {
+	g.panicChan = c
+}
+
+func (g GPS) doReceiveGPSMessages() {
 	c := &serial.Config{Name: g.deviceName, Baud: g.baud}
+
 	s, err := serial.OpenPort(c)
 	if err != nil {
-		log.Fatal(err)
+		log.Panicf("Failed to open serial port: %v", err)
+
+		return
 	}
-	go func() {
-		bufferedReader := bufio.NewReader(s)
-		defer s.Close()
 
-		for true {
-			str, err := bufferedReader.ReadString('\n')
+	// Close the serial port when we have to leave this method
+	defer s.Close()
+
+	bufferedReader := bufio.NewReader(s)
+
+	defer func() {
+		if r := recover(); r != nil {
+			log.Warning("Recovered in f", r)
+		}
+	}()
+
+	for {
+		str, err := bufferedReader.ReadString('\n')
+		// log.Debug("[%s]", str)
+		if err != nil {
+			log.Error("Failed to read from serial port: %v", err)
+			g.errorChan <- err
+			// Exit this method to close the port, and re-open it later
+			return
+		}
+
+		m, err := nmea.Parse(strings.TrimSuffix(str, "\r\n"))
+		if err != nil {
+			if !strings.HasSuffix(err.Error(), "not implemented") {
+				g.errorChan <- err
+			}
+			// Here we don't return as it is a non-fatal error and the next line
+			// will be better
+			continue
+		}
+
+		switch t := m.(type) {
+		default:
+			// don't care
+			// log.Debug("%+v\n", m)
+		case nmea.GPGGA:
+			fix, err := strconv.Atoi(t.FixQuality)
 			if err != nil {
-				log.Fatal(err)
-			}
+				log.Error("Failed to parse FixQuality [%s] : %v", t.FixQuality, err)
 
-			m, err := nmea.Parse(strings.TrimSuffix(str, "\r\n"))
-			if err == nil {
-				messagesChan <- m
 			} else {
-				errorChan <- err
+				log.Info("[GPGGA] fixQuality: %v hdop: %s sat: %s\n", fix, t.HDOP, t.NumSatellites)
+				g.messagesChan <- pilot.FixStatus(fix)
 			}
+		case nmea.GPRMC:
+			log.Info("[GPRMC] validity: %v heading: %v[˚] speed: %v[knots] \n", t.Validity == "A", t.Course, t.Speed)
+			g.messagesChan <- pilot.GPSFeedBackAction{
+				Heading:   t.Course,
+				Validity:  t.Validity == "A",
+				Speed:     t.Speed,
+				Longitude: t.Longitude,
+				Latitude:  t.Latitude,
+				Date:      t.Date,
+				Time:      t.Time,
+			}
+		}
+	}
+}
+
+// Start creates an infinite go routine which will try to open the serial port to the GPS
+// and parse the input to deliver sentences or errors on the respective channels.
+func (g GPS) Start() {
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				g.panicChan <- r
+			}
+		}()
+
+		for {
+			g.doReceiveGPSMessages()
+			time.Sleep(1 * time.Second)
 		}
 
 	}()
 
-	return messagesChan, errorChan
 }

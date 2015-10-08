@@ -18,114 +18,322 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-19 01:18:49
+* @Last Modified time: 2015-10-03 22:51:13
  */
 
 package main
 
 import (
+	"net/http"
 	"time"
 
-	"github.com/ssoudan/edisonIsThePilot/compass/hmc"
+	"github.com/ssoudan/edisonIsThePilot/alarm"
+	"github.com/ssoudan/edisonIsThePilot/conf"
+	"github.com/ssoudan/edisonIsThePilot/control"
+	"github.com/ssoudan/edisonIsThePilot/dashboard"
+	"github.com/ssoudan/edisonIsThePilot/drivers/gpio"
+	"github.com/ssoudan/edisonIsThePilot/drivers/motor"
+	"github.com/ssoudan/edisonIsThePilot/drivers/pwm"
 	"github.com/ssoudan/edisonIsThePilot/gps"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
-	"github.com/ssoudan/edisonIsThePilot/pwm"
-
-	// "bitbucket.org/gmcbay/i2c"
-
-	"github.com/adrianmo/go-nmea"
+	"github.com/ssoudan/edisonIsThePilot/infrastructure/pid"
+	"github.com/ssoudan/edisonIsThePilot/infrastructure/utils"
+	"github.com/ssoudan/edisonIsThePilot/infrastructure/webserver"
+	"github.com/ssoudan/edisonIsThePilot/pilot"
+	"github.com/ssoudan/edisonIsThePilot/steering"
 )
 
 var log = logger.Log("edisonIsThePilot")
 
+var Version = "unknown"
+
 func main() {
-	var err error
+	log.Info("Starting -- version %s", Version)
 
-	////////////////////////////////////////
-	// PWM stuffs
-	////////////////////////////////////////
-	var pwm = pwm.New(2)
-	if !pwm.IsExported() {
-		err = pwm.Export()
-		if err != nil {
-			log.Fatal(err)
+	panicChan := make(chan interface{})
+	defer func() {
+		if r := recover(); r != nil {
+			panicChan <- r
 		}
-	}
+	}()
 
-	pwm.Disable()
-
-	if err = pwm.SetPeriodAndDutyCycle(50*time.Millisecond, 0.5); err != nil {
-		log.Fatal(err)
-	}
-
-	if err = pwm.Enable(); err != nil {
-		log.Fatal(err)
-	}
-	log.Info("pwm configured")
-
-	////////////////////////////////////////
-	// HMC5883 stuffs
-	////////////////////////////////////////
-	compass := hmc.New(6)
-	for !compass.Begin() {
-
-	}
-
-	// Set measurement range
-	compass.SetRange(hmc.HMC5883L_RANGE_1_3GA)
-
-	// Set measurement mode
-	compass.SetMeasurementMode(hmc.HMC5883L_CONTINOUS)
-
-	// Set data rate
-	compass.SetDataRate(hmc.HMC5883L_DATARATE_3HZ)
-
-	// Set number of samples averaged
-	compass.SetSamples(hmc.HMC5883L_SAMPLES_8)
-
-	// Set calibration offset. See HMC5883L_calibration.ino
-	compass.SetOffset(-82, 72)
-
-	mag, err := compass.ReadNormalize()
-	if err == nil {
-		log.Info("Compass reading is %v", mag)
-	}
-
-	////////////////////////////////////////
-	// I2C stuffs
-	////////////////////////////////////////
-
-	// bp, err := i2c.Bus(1)
-	// if err != nil {
-	// 	log.Panicf("failed to create bus: %v\n", err)
-	// }
-	// addr := 0x12
-	// reg := 0x13
-	// len := 0x1
-	// data, err := bp.ReadByteBlock(addr, reg, length)
-
-	////////////////////////////////////////
-	// gps stuffs
-	////////////////////////////////////////
-	gps := gps.New("/dev/ttyMFD1")
-	messagesChan, errorChan := gps.Stream()
-
-	for {
+	go func() {
 		select {
-		case m := <-messagesChan:
-			switch t := m.(type) {
-			default:
-				// don't care
-				log.Debug("%+v\n", m)
-			case nmea.GPRMC:
-				log.Info("[GPRMC] validity: %v heading: %v[˚] speed: %v[knots] \n", t.Validity == "A", t.Course, t.Speed)
+		case m := <-panicChan:
+
+			// kill the process (via log.Fatal) in case we can't create the PWM
+			if pwm, err := pwm.New(conf.AlarmGpioPWM, conf.AlarmGpioPin); err == nil {
+				if !pwm.IsExported() {
+					err = pwm.Export()
+					if err != nil {
+						log.Error("Failed to raise the alarm")
+					}
+				}
+
+				pwm.Enable()
+			} else {
+				log.Error("Failed to raise the alarm")
 			}
-		case err := <-errorChan:
-			log.Warning("Error while processing GPS message: %v", err)
+			// The motor
+			motor := motor.New(
+				conf.MotorStepPin,
+				conf.MotorStepPwm,
+				conf.MotorDirPin,
+				conf.MotorSleepPin)
+			if err := motor.Disable(); err != nil {
+				log.Error("Failed to stop the motor")
+			}
+			motor.Unexport()
+
+			log.Fatalf("Version %v -- Received a panic error -- exiting: %v", Version, m)
 		}
+	}()
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				panicChan <- r
+			}
+		}()
+
+		http.HandleFunc("/", webserver.VersionEndpoint(Version))
+		err := http.ListenAndServe(":8000", nil)
+		if err != nil {
+			log.Panic("Already running! or something is living on port 8000 - exiting")
+		}
+	}()
+
+	////////////////////////////////////////
+	// Init the IO
+	////////////////////////////////////////
+	// the LEDs
+	mapMessageToGPIO := func(message string, pin byte) gpio.Gpio {
+
+		// kill the process (via log.Panic -> recover -> panicChan -> go routine -> log.Fatal) in case we can't create the GPIO
+		err := gpio.EnableGPIO(pin)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		var g = gpio.New(pin)
+		if !g.IsExported() {
+			err = g.Export()
+			if err != nil {
+				log.Panic(err)
+			}
+		}
+
+		err = g.SetDirection(gpio.OUT)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		// Test Disabled and Enabled state for each LEDs
+		err = g.Disable()
+		if err != nil {
+			log.Panic(err)
+		}
+
+		log.Info("[AUTOTEST] %s LED is ON", message)
+		time.Sleep(1 * time.Second)
+
+		err = g.Enable()
+		if err != nil {
+			log.Panic(err)
+		}
+
+		log.Info("[AUTOTEST] %s LED is OFF", message)
+		time.Sleep(1 * time.Second)
+
+		err = g.Disable()
+		if err != nil {
+			log.Panic(err)
+		}
+
+		return g
+	}
+	dashboardGPIOs := make(map[string]gpio.Gpio, len(conf.MessageToPin))
+	for _, v := range conf.MessageToPin {
+		g := mapMessageToGPIO(v.Message, v.Pin)
+		dashboardGPIOs[v.Message] = g
+	}
+	defer func() {
+		for _, g := range dashboardGPIOs {
+			g.Disable()
+			g.Unexport()
+		}
+	}()
+
+	// the input button
+	switchGpio := func(pin byte) gpio.Gpio {
+
+		// kill the process (via log.Panic) in case we can't create the GPIO
+		err := gpio.EnableGPIO(pin)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		var g = gpio.New(pin)
+		if !g.IsExported() {
+			err = g.Export()
+			if err != nil {
+				log.Panic(err)
+			}
+		}
+
+		err = g.SetDirection(gpio.IN)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		err = g.SetActiveLevel(gpio.ACTIVE_HIGH)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		// Test we can read it and make we we don't go beyond this point until the switch is OFF
+		// to prevent the autopilot to be re-enabled when the system restart.
+		// Since the alarm has not been initialized yet, after a reboot it will be ON.
+		for value, err := g.Value(); value; value, err = g.Value() {
+			if err != nil {
+				log.Panic(err)
+			}
+
+			log.Info("[AUTOTEST] current autopilot switch position is ON - switch it OFF to proceed.")
+
+			time.Sleep(200 * time.Millisecond)
+		}
+
+		return g
+	}(conf.SwitchGpioPin)
+	defer switchGpio.Unexport()
+
+	// The motor
+	motor := motor.New(
+		conf.MotorStepPin,
+		conf.MotorStepPwm,
+		conf.MotorDirPin,
+		conf.MotorSleepPin)
+	defer motor.Disable()
+	defer motor.Unexport()
+
+	// The alarm
+	alarmPwm := func(pin byte, pwmId byte) *pwm.Pwm {
+
+		// kill the process (via log.Panic) in case we can't create the PWM
+		pwm, err := pwm.New(pwmId, pin)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		if !pwm.IsExported() {
+			err = pwm.Export()
+			if err != nil {
+				log.Panic(err)
+			}
+		}
+
+		pwm.Disable()
+
+		if err = pwm.SetPeriodAndDutyCycle(200*time.Millisecond, 0.5); err != nil {
+			log.Panic(err)
+		}
+
+		if err = pwm.Enable(); err != nil {
+			log.Panic(err)
+		}
+		log.Info("[AUTOTEST] alarm is ON")
+
+		time.Sleep(2 * time.Second)
+		if err = pwm.Disable(); err != nil {
+			log.Panic(err)
+		}
+		log.Info("[AUTOTEST] alarm is OFF")
+
+		return pwm
+	}(conf.AlarmGpioPin, conf.AlarmGpioPWM)
+	defer alarmPwm.Unexport()
+
+	////////////////////////////////////////
+	// a nice and delicate alarm
+	////////////////////////////////////////
+
+	alarm := alarm.New(alarmPwm)
+	alarmChan := make(chan interface{})
+	alarm.SetInputChan(alarmChan)
+	alarm.SetPanicChan(panicChan)
+
+	////////////////////////////////////////
+	// a beautiful dashboard
+	////////////////////////////////////////
+	dashboard := dashboard.New()
+	dashboardChan := make(chan interface{})
+	dashboard.SetInputChan(dashboardChan)
+	dashboard.SetPanicChan(panicChan)
+	for m, g := range dashboardGPIOs {
+		dashboard.RegisterMessageHandler(m, g)
 	}
 
-	pwm.Disable()
-	pwm.Unexport()
+	////////////////////////////////////////
+	// an astonishing steering
+	////////////////////////////////////////
+	steering := steering.New(motor)
+	steeringChan := make(chan interface{})
+	steering.SetInputChan(steeringChan)
+	steering.SetPanicChan(panicChan)
+
+	////////////////////////////////////////
+	// an amazing PID
+	////////////////////////////////////////
+	pidController := pid.New(
+		conf.P,
+		conf.I,
+		conf.D,
+		conf.N,
+		conf.MinPIDOutputLimits,
+		conf.MaxPIDOutputLimits)
+
+	////////////////////////////////////////
+	// a great pilot
+	////////////////////////////////////////
+	thePilot := pilot.New(pidController, conf.Bounds)
+	pilotChan := make(chan interface{})
+	thePilot.SetInputChan(pilotChan)
+	thePilot.SetDashboardChan(dashboardChan)
+	thePilot.SetAlarmChan(alarmChan)
+	thePilot.SetSteeringChan(steeringChan)
+	thePilot.SetPanicChan(panicChan)
+
+	////////////////////////////////////////
+	// a surprising input
+	////////////////////////////////////////
+	control := control.New(switchGpio, thePilot)
+	control.SetPanicChan(panicChan)
+
+	////////////////////////////////////////
+	// a wonderful gps
+	////////////////////////////////////////
+	gps := gps.New(conf.GpsSerialPort)
+	gps.SetMessagesChan(pilotChan)
+	gps.SetErrorChan(pilotChan)
+	gps.SetPanicChan(panicChan)
+
+	gps.Start()
+	control.Start()
+	defer control.Shutdown()
+	alarm.Start()
+	defer alarm.Shutdown()
+	dashboard.Start()
+	defer dashboard.Shutdown()
+	steering.Start()
+	defer steering.Shutdown()
+	thePilot.Start()
+	defer thePilot.Shutdown()
+
+	// Wait until we receive a signal
+	utils.WaitForInterrupt(func() {
+		log.Info("Interrupted - exiting")
+		log.Info("Exiting -- version %v", Version)
+	})
 
 }
