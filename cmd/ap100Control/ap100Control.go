@@ -18,14 +18,15 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-10-10 17:19:10
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-11 13:19:04
+* @Last Modified time: 2015-10-12 19:31:12
  */
 package main
 
 import (
 	"time"
 
-	"github.com/ssoudan/edisonIsThePilot/drivers/mcp4725"
+	"github.com/ssoudan/edisonIsThePilot/conf"
+	"github.com/ssoudan/edisonIsThePilot/drivers/ap100"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 )
 
@@ -33,31 +34,11 @@ var log = logger.Log("ap100Control")
 
 func main() {
 
-	bus := byte(6)
-	address1 := byte(0x62) // or 0x63
-	address2 := byte(0x63)
+	compass := ap100.New(conf.I2CBus, conf.SinAddress, conf.CosAddress)
 
-	mcp, err := mcp4725.New(bus, address1)
-	if err != nil {
-		log.Panic("%v", err)
-	}
-
-	mcp2, err := mcp4725.New(bus, address2)
-	if err != nil {
-		log.Panic("%v", err)
-	}
-
-	for i := uint16(0); i < 0xfff; i++ {
-		err = mcp.SetValue(i)
-		if err != nil {
-			log.Info("mcp1: %v", err)
-		}
-
-		err = mcp2.SetValue((i + 0x800) % 0xfff)
-		if err != nil {
-			log.Info("mcp2: %v", err)
-		}
-		time.Sleep(10 * time.Microsecond)
+	for i := uint16(0); i <= 360; i++ {
+		compass.UpdateHeading(i)
+		time.Sleep(200 * time.Millisecond)
 	}
 
 }

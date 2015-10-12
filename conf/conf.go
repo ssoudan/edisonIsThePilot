@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:18:01
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-07 17:35:04
+* @Last Modified time: 2015-10-12 19:30:38
  */
 
 package conf
@@ -48,6 +48,9 @@ const (
 	MotorStepPin  = 182 // J17 - pin 1
 	MotorStepPwm  = 2   // corresponding pwm number
 	SwitchGpioPin = 46  // J19 - pin 5
+	I2CBus        = 6
+	SinAddress    = 0x62
+	CosAddress    = 0x63
 )
 
 const (
