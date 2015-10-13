@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 17:13:41
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-13 17:19:39
+* @Last Modified time: 2015-10-13 17:33:43
  */
 
 package gps
@@ -136,7 +136,9 @@ func (g GPS) doReceiveGPSMessages() {
 				Date:      t.Date,
 				Time:      t.Time,
 			}
-			g.headingChan <- ap100.NewMessage(uint16(t.Course))
+			if t.Validity == "A" {
+				g.headingChan <- ap100.NewMessage(uint16(t.Course))
+			}
 		}
 	}
 }
