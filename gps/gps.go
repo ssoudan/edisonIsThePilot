@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 17:13:41
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-03 23:15:41
+* @Last Modified time: 2015-10-13 17:19:39
  */
 
 package gps
@@ -29,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ssoudan/edisonIsThePilot/ap100"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 	"github.com/ssoudan/edisonIsThePilot/pilot"
 
@@ -44,6 +45,7 @@ type GPS struct {
 
 	// channels
 	messagesChan chan interface{}
+	headingChan  chan interface{}
 	errorChan    chan interface{}
 	panicChan    chan interface{}
 }
@@ -55,6 +57,10 @@ func New(deviceName string) GPS {
 
 func (g *GPS) SetMessagesChan(c chan interface{}) {
 	g.messagesChan = c
+}
+
+func (g *GPS) SetHeadingChan(c chan interface{}) {
+	g.headingChan = c
 }
 
 func (g *GPS) SetErrorChan(c chan interface{}) {
@@ -130,6 +136,7 @@ func (g GPS) doReceiveGPSMessages() {
 				Date:      t.Date,
 				Time:      t.Time,
 			}
+			g.headingChan <- ap100.NewMessage(uint16(t.Course))
 		}
 	}
 }

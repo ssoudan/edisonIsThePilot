@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-10-10 17:19:10
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-12 19:31:12
+* @Last Modified time: 2015-10-13 17:24:09
  */
 package main
 
@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/ssoudan/edisonIsThePilot/conf"
-	"github.com/ssoudan/edisonIsThePilot/drivers/ap100"
+	"github.com/ssoudan/edisonIsThePilot/drivers/sincos"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 )
 
@@ -34,10 +34,10 @@ var log = logger.Log("ap100Control")
 
 func main() {
 
-	compass := ap100.New(conf.I2CBus, conf.SinAddress, conf.CosAddress)
+	compass := sincos.New(conf.I2CBus, conf.SinAddress, conf.CosAddress)
 
 	for i := uint16(0); i <= 360; i++ {
-		compass.UpdateHeading(i)
+		compass.UpdateCourse(i)
 		time.Sleep(200 * time.Millisecond)
 	}
 

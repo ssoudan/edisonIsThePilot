@@ -32,7 +32,7 @@ GOFMT=gofmt -w
 # Package lists
 TOPLEVEL_PKG := github.com/ssoudan/edisonIsThePilot
 INT_LIST :=  #<-- Interface directories
-IMPL_LIST := conf control alarm dashboard pilot gps steering stepper drivers/pwm drivers/mcp4725 drivers/ap100 drivers/gpio drivers/motor  infrastructure/logger infrastructure/pid  #<-- Implementation directories
+IMPL_LIST := conf control alarm dashboard pilot gps steering stepper drivers/pwm drivers/mcp4725 drivers/sincos drivers/gpio drivers/motor  infrastructure/logger infrastructure/pid  #<-- Implementation directories
 CMD_LIST := cmd/edisonIsThePilot cmd/mario cmd/ap100Control cmd/systemCalibration cmd/motorControl cmd/ledControl cmd/motorCalibration cmd/alarmControl #<-- Command directories
 
 # List building

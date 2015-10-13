@@ -18,10 +18,10 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-10-12 19:20:55
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-12 19:28:52
+* @Last Modified time: 2015-10-13 17:23:52
  */
 
-package ap100
+package sincos
 
 import (
 	"math"
@@ -30,23 +30,26 @@ import (
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 )
 
-var log = logger.Log("ap100")
+var log = logger.Log("sincos")
 
+// ToSinCos returns the Sine/Cosine values as expected by the Robertson autopilots (+/- 2V centered on 2.5V)
 func ToSinCos(theta uint16) (uint16, uint16) {
 	s, c := math.Sincos(float64(theta) * math.Pi / 180)
 
+	// MCP4725 is a 12 bits DAC between 0 and Vcc(=5V)
 	sf := float64(0xfff) * (0.5 + 0.4*s)
 	cf := float64(0xfff) * (0.5 + 0.4*c)
 
 	return uint16(sf), uint16(cf)
 }
 
-type AP100 struct {
+type SinCosInterface struct {
 	sin *mcp4725.MCP4725
 	cos *mcp4725.MCP4725
 }
 
-func New(bus, sinAddr, cosAddr byte) *AP100 {
+// New creates a new SinCosInterface interface (through 2 MCP4725 on an i2c bus)
+func New(bus, sinAddr, cosAddr byte) *SinCosInterface {
 
 	sin, err := mcp4725.New(bus, sinAddr)
 	if err != nil {
@@ -58,10 +61,11 @@ func New(bus, sinAddr, cosAddr byte) *AP100 {
 		log.Panic(err)
 	}
 
-	return &AP100{sin: sin, cos: cos}
+	return &SinCosInterface{sin: sin, cos: cos}
 }
 
-func (ap AP100) UpdateHeading(theta uint16) error {
+// UpdateCourse sets the Sin/Cos outputs to the values that correspond to the provided course (in degree)
+func (ap SinCosInterface) UpdateCourse(theta uint16) error {
 	ss, cc := ToSinCos(theta)
 	err := ap.sin.SetValue(ss)
 	if err != nil {

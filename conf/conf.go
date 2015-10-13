@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:18:01
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-12 19:30:38
+* @Last Modified time: 2015-10-12 19:33:58
  */
 
 package conf
@@ -41,16 +41,16 @@ var MessageToPin = []MessagePin{
 }
 
 const (
-	AlarmGpioPin  = 183 // J18 - pin 8
-	AlarmGpioPWM  = 3   // corresponding pwm number
-	MotorDirPin   = 165 // J18 - pin 2
-	MotorSleepPin = 12  // J18 - pin 7
-	MotorStepPin  = 182 // J17 - pin 1
-	MotorStepPwm  = 2   // corresponding pwm number
-	SwitchGpioPin = 46  // J19 - pin 5
-	I2CBus        = 6
-	SinAddress    = 0x62
-	CosAddress    = 0x63
+	AlarmGpioPin  = 183  // J18 - pin 8
+	AlarmGpioPWM  = 3    // corresponding pwm number
+	MotorDirPin   = 165  // J18 - pin 2
+	MotorSleepPin = 12   // J18 - pin 7
+	MotorStepPin  = 182  // J17 - pin 1
+	MotorStepPwm  = 2    // corresponding pwm number
+	SwitchGpioPin = 46   // J19 - pin 5
+	I2CBus        = 6    // I2C bus where the Sin/Cos DAC are
+	SinAddress    = 0x62 // Address on I2CBus of the MCP4725 used for the Sine
+	CosAddress    = 0x63 // Address on I2CBus of the MCP4725 used for the Cosine
 )
 
 const (
