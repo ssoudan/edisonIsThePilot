@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-19 12:30:26
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 10:16:57
+* @Last Modified time: 2015-10-11 13:15:13
  */
 
 package gpio
@@ -36,4 +36,24 @@ func EnablePWM(pin byte) error {
 // EnableGPIO enables GPIO mode on a mux-ed pin
 func EnableGPIO(pin byte) error {
 	return writeTo(fmt.Sprintf("/sys/kernel/debug/gpio_debug/gpio%d/current_pinmux", pin), "mode0")
+}
+
+// EnableI2C enables i2c mode on a mux-ed pin
+func EnableI2C(pin byte) error {
+	return writeTo(fmt.Sprintf("/sys/kernel/debug/gpio_debug/gpio%d/current_pinmux", pin), "mode1")
+}
+
+// EnableFastI2C enables i2c fast mode
+func EnableFastI2C(bus byte) error {
+	return writeTo(fmt.Sprintf("/sys/class/i2c-adapter/i2c-%d/device/i2c_dw_sysnode/mode", bus), "fast")
+}
+
+// EnableStdI2C enables i2c fast mode
+func EnableStdI2C(bus byte) error {
+	return writeTo(fmt.Sprintf("/sys/class/i2c-adapter/i2c-%d/device/i2c_dw_sysnode/mode", bus), "std")
+}
+
+// EnableHighI2C enables i2c fast mode
+func EnableHighI2C(bus byte) error {
+	return writeTo(fmt.Sprintf("/sys/class/i2c-adapter/i2c-%d/device/i2c_dw_sysnode/mode", bus), "high")
 }

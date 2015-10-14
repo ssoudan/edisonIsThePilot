@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-03 22:51:13
+* @Last Modified time: 2015-10-13 17:22:05
  */
 
 package main
@@ -28,12 +28,14 @@ import (
 	"time"
 
 	"github.com/ssoudan/edisonIsThePilot/alarm"
+	"github.com/ssoudan/edisonIsThePilot/ap100"
 	"github.com/ssoudan/edisonIsThePilot/conf"
 	"github.com/ssoudan/edisonIsThePilot/control"
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
 	"github.com/ssoudan/edisonIsThePilot/drivers/gpio"
 	"github.com/ssoudan/edisonIsThePilot/drivers/motor"
 	"github.com/ssoudan/edisonIsThePilot/drivers/pwm"
+	"github.com/ssoudan/edisonIsThePilot/drivers/sincos"
 	"github.com/ssoudan/edisonIsThePilot/gps"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/pid"
@@ -254,6 +256,9 @@ func main() {
 	}(conf.AlarmGpioPin, conf.AlarmGpioPWM)
 	defer alarmPwm.Unexport()
 
+	// The compass sincos output interface
+	compass := sincos.New(conf.I2CBus, conf.SinAddress, conf.CosAddress)
+
 	////////////////////////////////////////
 	// a nice and delicate alarm
 	////////////////////////////////////////
@@ -311,13 +316,24 @@ func main() {
 	control.SetPanicChan(panicChan)
 
 	////////////////////////////////////////
+	// a friendly interface to the AP100
+	////////////////////////////////////////
+	ap100 := ap100.New(compass)
+	headingChan := make(chan interface{})
+	ap100.SetInputChan(headingChan)
+	ap100.SetPanicChan(panicChan)
+
+	////////////////////////////////////////
 	// a wonderful gps
 	////////////////////////////////////////
 	gps := gps.New(conf.GpsSerialPort)
 	gps.SetMessagesChan(pilotChan)
+	gps.SetHeadingChan(headingChan)
 	gps.SetErrorChan(pilotChan)
 	gps.SetPanicChan(panicChan)
 
+	ap100.Start()
+	defer ap100.Shutdown()
 	gps.Start()
 	control.Start()
 	defer control.Shutdown()
