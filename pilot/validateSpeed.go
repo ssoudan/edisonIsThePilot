@@ -28,5 +28,5 @@ import (
 )
 
 func checkSpeedError(speed float64) Alarm {
-	return Alarm(speed < conf.MinimumSpeedInKnots)
+	return Alarm(speed < conf.Conf.MinimumSpeedInKnots)
 }

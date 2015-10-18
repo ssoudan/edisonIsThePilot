@@ -269,8 +269,8 @@ func TestThatPIDOutputMatchesTheSimulation(t *testing.T) {
 		I,
 		D,
 		N,
-		conf.MinPIDOutputLimits,
-		conf.MaxPIDOutputLimits)
+		conf.Conf.MinPIDOutputLimits,
+		conf.Conf.MaxPIDOutputLimits)
 
 	pidController.Set(0)
 
@@ -292,15 +292,15 @@ func TestThatPIDOutputDoNotExceedMaxOutput(t *testing.T) {
 		1,
 		1,
 		1,
-		conf.MinPIDOutputLimits,
-		conf.MaxPIDOutputLimits)
+		conf.Conf.MinPIDOutputLimits,
+		conf.Conf.MaxPIDOutputLimits)
 
-	pidController.Set(10 * conf.MaxPIDOutputLimits)
+	pidController.Set(10 * conf.Conf.MaxPIDOutputLimits)
 
 	for i := 0; i < 100; i++ {
 		output := pidController.updateWithDuration(0, 1.)
 
-		assert.True(t, output <= conf.MaxPIDOutputLimits, "output should never be larger than maxOutput")
+		assert.True(t, output <= conf.Conf.MaxPIDOutputLimits, "output should never be larger than maxOutput")
 	}
 
 }
@@ -312,14 +312,14 @@ func TestThatPIDOutputDoNotExceedMinOutput(t *testing.T) {
 		1,
 		1,
 		1,
-		conf.MinPIDOutputLimits,
-		conf.MaxPIDOutputLimits)
+		conf.Conf.MinPIDOutputLimits,
+		conf.Conf.MaxPIDOutputLimits)
 
-	pidController.Set(10 * conf.MinPIDOutputLimits)
+	pidController.Set(10 * conf.Conf.MinPIDOutputLimits)
 
 	for i := 0; i < 100; i++ {
 		output := pidController.updateWithDuration(0, 1.)
-		assert.True(t, output >= conf.MinPIDOutputLimits, "output should never be larger than maxOutput")
+		assert.True(t, output >= conf.Conf.MinPIDOutputLimits, "output should never be larger than maxOutput")
 	}
 
 }

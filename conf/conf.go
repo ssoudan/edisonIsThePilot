@@ -17,15 +17,20 @@ under the License.
 /*
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:18:01
-* @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-12 19:33:58
+* @Last Modified by:   Philippe Martinez
+* @Last Modified time: 2015-10-18 19:33:58
  */
 
 package conf
 
 import (
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
+	"github.com/spf13/viper"
+	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
+
 )
+var log = logger.Log("conf")
+
 
 type MessagePin struct {
 	Message string
@@ -53,16 +58,62 @@ const (
 	CosAddress    = 0x63 // Address on I2CBus of the MCP4725 used for the Cosine
 )
 
-const (
-	Bounds                         = 25.                          // error bound in degree
-	SteeringReductionRatio         = 380 / 25                     // reduction ratio between the motor and the steering wheel
-	MaxPIDOutputLimits             = 25 * SteeringReductionRatio  // maximum pid output value (in degree)
-	MinPIDOutputLimits             = -25 * SteeringReductionRatio // minimum pid output value (in degree)
-	P                              = 0.104659039843542            // Proportional coefficient
-	I                              = 8.06799673280568e-05         // Integrative coefficient
-	D                              = 27.8353089535829             // Derivative coefficient
-	N                              = 1.23108985822891             // Derivative filter coefficient
-	GpsSerialPort                  = "/dev/ttyMFD1"
-	NoInputMessageTimeoutInSeconds = 10
-	MinimumSpeedInKnots            = 3
-)
+type Configuration struct{
+	Bounds                         float64// error bound in degree
+	SteeringReductionRatio         float64// reduction ratio between the motor and the steering wheel
+	MaxPIDOutputLimits             float64// maximum pid output value (in degree)
+	MinPIDOutputLimits             float64// minimum pid output value (in degree)
+	P                              float64// Proportional coefficient
+	I                              float64// Integrative coefficient
+	D                              float64// Derivative coefficient
+	N                              float64// Derivative filter coefficient
+	GpsSerialPort                  string
+	NoInputMessageTimeoutInSeconds int64
+	MinimumSpeedInKnots            float64
+}
+
+
+func postLoadConfiguration(configuration Configuration) Configuration {
+
+	//set relative values  
+	configuration.MaxPIDOutputLimits = configuration.Bounds * configuration.SteeringReductionRatio
+	configuration.MinPIDOutputLimits = -(configuration.Bounds) * configuration.SteeringReductionRatio
+	
+	return configuration
+}
+
+func setDefaultValues() {
+	viper.SetDefault("Bounds",25.)
+	viper.SetDefault("SteeringReductionRatio",380/25)
+	viper.SetDefault("P",0.104659039843542)
+	viper.SetDefault("I",8.06799673280568e-05)
+	viper.SetDefault("D",27.8353089535829)
+	viper.SetDefault("N",2.23108985822891)
+	viper.SetDefault("GpsSerialPort","/dev/ttyMFD1")
+	viper.SetDefault("NoInputMessageTimeoutInSeconds",10)
+	viper.SetDefault("MinimumSpeedInKnots",3)
+}
+
+func loadConfiguration() Configuration {
+	var conf Configuration
+	
+	viper.SetConfigType("properties") 
+	viper.SetConfigName("edisonIsThePilot") // name of config file (without extension)
+	viper.AddConfigPath("/etc")   // path to look for the config file in	
+	setDefaultValues()
+	err := viper.ReadInConfig() // Find and read the config file
+	if err != nil { // Handle errors reading the config file
+	     log.Warning("Unable to read the configuration file (looking for edisonIsThePilot.properties in /etc/ path). Using default values")
+	    
+	}
+	err = viper.Unmarshal(&conf) 
+	if err != nil { // Handle errors reading the config file
+	    log.Panic("Unable to load configuration. Check edisonIsThePilot.properties file")
+	}
+	
+	conf = postLoadConfiguration(conf)
+	log.Info("Configuration is: %#v", conf)
+	return conf
+}	
+// Conf contains the configuration parameters loaded at the initialization from the edisonIsThePilot.properties or defaults values
+var Conf = loadConfiguration() 

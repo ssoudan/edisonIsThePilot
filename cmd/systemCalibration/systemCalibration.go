@@ -146,7 +146,7 @@ func main() {
 	////////////////////////////////////////
 	// a wonderful gps
 	////////////////////////////////////////
-	gps := gps.New(conf.GpsSerialPort)
+	gps := gps.New(conf.Conf.GpsSerialPort)
 	gps.SetMessagesChan(stepperChan)
 	gps.SetErrorChan(stepperChan)
 	gps.SetPanicChan(panicChan)

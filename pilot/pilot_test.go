@@ -155,14 +155,14 @@ func TestThatHeadingIsSetWithFirstGPSHeadingAfterItHasBeenEnabled(t *testing.T) 
 	assert.EqualValues(t, false, pilot.headingSet, "heading need to be set during first updateFeedback")
 
 	gpsHeadingStep1 := 180.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep1, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep1, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, true, pilot.headingSet, "heading has been set to first gpsHeading")
 	assert.EqualValues(t, gpsHeadingStep1, pilot.heading, "heading has been set to first gpsHeading")
 
 	gpsHeading := 170.
 
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, true, pilot.headingSet, "heading has been set to first gpsHeading")
 	assert.EqualValues(t, gpsHeadingStep1, pilot.heading, "heading has been set to first gpsHeading")
@@ -210,7 +210,7 @@ func TestThatPIDControllerIsUpdatedWhenThePilotIsEnabled(t *testing.T) {
 	assert.EqualValues(t, false, pilot.headingSet, "heading need to be set during first updateFeedback")
 
 	gpsHeadingStep1 := 180.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep1, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep1, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, true, pilot.headingSet, "heading has been set to first gpsHeading")
 	assert.EqualValues(t, gpsHeadingStep1, pilot.heading, "heading has been set to first gpsHeading")
@@ -220,7 +220,7 @@ func TestThatPIDControllerIsUpdatedWhenThePilotIsEnabled(t *testing.T) {
 
 	gpsHeading := 170.
 
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, true, pilot.headingSet, "heading has been set to first gpsHeading")
 	assert.EqualValues(t, gpsHeadingStep1, pilot.heading, "heading has been set to first gpsHeading")
@@ -231,7 +231,7 @@ func TestThatPIDControllerIsUpdatedWhenThePilotIsEnabled(t *testing.T) {
 	pilot.disable()
 
 	gpsHeadingStep3 := 180.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep3, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep3, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, 0., controller.sp, "sp has been set to 0 by the first updateFeedback() call after enable()")
 	assert.EqualValues(t, gpsHeading-gpsHeadingStep1, controller.lastValue, "error has not changed - since Update() has not been called cause the pilot is disabled")
@@ -308,10 +308,10 @@ func TestThatOutOfBoundsGPSInputRaisesAnAlarm(t *testing.T) {
 	pilot.enable()
 
 	gpsHeading := 180.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	gpsHeading = 110.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	expected := RAISED
 	result := pilot.alarm

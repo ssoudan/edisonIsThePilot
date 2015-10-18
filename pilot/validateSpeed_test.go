@@ -33,7 +33,7 @@ import (
 
 func TestCheckSpeedErrorRaisesAnAlarmWhenTooSlow(t *testing.T) {
 
-	input := conf.MinimumSpeedInKnots * 0.9
+	input := conf.Conf.MinimumSpeedInKnots * 0.9
 	alarm := checkSpeedError(input)
 
 	expected := RAISED
@@ -43,7 +43,7 @@ func TestCheckSpeedErrorRaisesAnAlarmWhenTooSlow(t *testing.T) {
 
 func TestCheckSpeedErrorDoNotRaiseAnAlarmWhenLargeEnough(t *testing.T) {
 
-	input := conf.MinimumSpeedInKnots * 1.1
+	input := conf.Conf.MinimumSpeedInKnots * 1.1
 	alarm := checkSpeedError(input)
 
 	expected := UNRAISED
