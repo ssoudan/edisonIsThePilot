@@ -25,9 +25,8 @@ package pilot
 
 import (
 	"time"
-
-	"github.com/ssoudan/edisonIsThePilot/alarm"
 	"github.com/ssoudan/edisonIsThePilot/conf"
+	"github.com/ssoudan/edisonIsThePilot/alarm"
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 	"github.com/ssoudan/edisonIsThePilot/steering"
@@ -261,7 +260,7 @@ func (p Pilot) Start() {
 					log.Error("Received an error: %v", m)
 					p.updateAfterError()
 				}
-			case <-time.After(conf.NoInputMessageTimeoutInSeconds * time.Second):
+			case <-time.After(time.Duration(conf.Conf.NoInputMessageTimeoutInSeconds) * time.Second):
 				p.updateAfterTimeout()
 			case <-p.shutdownChan:
 				p.shutdown()

@@ -60,7 +60,7 @@ func TestEnableDisable(t *testing.T) {
 	assert.EqualValues(t, false, pilot.headingSet, "heading need to be set during first updateFeedback")
 
 	gpsHeading1 := 180.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading1, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading1, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, true, pilot.headingSet, "headingSet is set")
 	assert.EqualValues(t, gpsHeading1, pilot.heading, "heading has been set to first gpsHeading")
@@ -69,7 +69,7 @@ func TestEnableDisable(t *testing.T) {
 
 	gpsHeading2 := gpsHeading1 - bound - 10.
 	// will cause the state to become out of bound and thus the alarm to be raised
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading2, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading2, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, true, pilot.headingSet, "another update does not change headingSet")
 	assert.EqualValues(t, gpsHeading1, pilot.heading, "another update does not change the heading")
@@ -90,7 +90,7 @@ func TestEnableDisable(t *testing.T) {
 	assert.EqualValues(t, false, pilot.headingSet, "heading again need to be set during next updateFeedback")
 
 	gpsHeading3 := 90.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading3, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading3, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, true, pilot.headingSet, "headingSet is set")
 	assert.EqualValues(t, gpsHeading3, pilot.heading, "heading has been set to another value")

@@ -58,8 +58,9 @@ fmt: $(FMT_LIST)
 deploy: build test
 	$(SSH) systemctl stop edisonIsThePilot
 	sleep 3
-	$(SCP) mario edisonIsThePilot motorControl systemCalibration alarmControl ledControl motorCalibration edisonIsThePilot.service root@edison.local.:
+	$(SCP) mario edisonIsThePilot motorControl systemCalibration alarmControl ledControl motorCalibration edisonIsThePilot.service  edisonIsThePilot.properties root@edison.local.:
 	$(SSH) cp edisonIsThePilot.service /lib/systemd/system
+	$(SSH) cp edisonIsThePilot.properties /etc/
 	$(SSH) systemctl daemon-reload
 	$(SSH) systemctl start edisonIsThePilot
 

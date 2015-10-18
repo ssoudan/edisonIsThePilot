@@ -291,17 +291,17 @@ func main() {
 	// an amazing PID
 	////////////////////////////////////////
 	pidController := pid.New(
-		conf.P,
-		conf.I,
-		conf.D,
-		conf.N,
-		conf.MinPIDOutputLimits,
-		conf.MaxPIDOutputLimits)
+		conf.Conf.P,
+		conf.Conf.I,
+		conf.Conf.D,
+		conf.Conf.N,
+		conf.Conf.MinPIDOutputLimits,
+		conf.Conf.MaxPIDOutputLimits)
 
 	////////////////////////////////////////
 	// a great pilot
 	////////////////////////////////////////
-	thePilot := pilot.New(pidController, conf.Bounds)
+	thePilot := pilot.New(pidController, conf.Conf.Bounds)
 	pilotChan := make(chan interface{})
 	thePilot.SetInputChan(pilotChan)
 	thePilot.SetDashboardChan(dashboardChan)
@@ -326,7 +326,7 @@ func main() {
 	////////////////////////////////////////
 	// a wonderful gps
 	////////////////////////////////////////
-	gps := gps.New(conf.GpsSerialPort)
+	gps := gps.New(conf.Conf.GpsSerialPort)
 	gps.SetMessagesChan(pilotChan)
 	gps.SetHeadingChan(headingChan)
 	gps.SetErrorChan(pilotChan)
