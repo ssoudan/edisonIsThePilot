@@ -18,22 +18,24 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 11:55:49
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-30 12:37:27
+* @Last Modified time: 2015-10-21 12:53:12
  */
 
 package control
 
 import (
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
+	"github.com/ssoudan/edisonIsThePilot/infrastructure/types"
 
 	"time"
 )
 
 var log = logger.Log("control")
 
+// Control is a component that monitors change on a types.Readable and Enable or Disable its target
 type Control struct {
-	controlHandler Readable
-	target         Enablable
+	controlHandler types.Readable
+	target         types.Enablable
 	stateEnable    bool
 
 	// channels
@@ -41,19 +43,12 @@ type Control struct {
 	panicChan    chan interface{}
 }
 
-type Enablable interface {
-	Enable() error
-	Disable() error
-}
-
-type Readable interface {
-	Value() (bool, error)
-}
-
-func New(controlHandler Readable, target Enablable) *Control {
+// New creates a new Control component
+func New(controlHandler types.Readable, target types.Enablable) *Control {
 	return &Control{controlHandler: controlHandler, target: target, shutdownChan: make(chan interface{})}
 }
 
+// SetPanicChan sets the channel where panics will be sent
 func (c *Control) SetPanicChan(p chan interface{}) {
 	c.panicChan = p
 }

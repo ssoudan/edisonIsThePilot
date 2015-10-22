@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 14:10:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 13:08:03
+* @Last Modified time: 2015-10-21 13:09:54
  */
 
 package pwm
@@ -34,19 +34,22 @@ import (
 
 const (
 	maxPeriodNanoSec = 218453000
+	// MaxPeriod is the maximum period a PWM can have
 	MaxPeriod        = maxPeriodNanoSec * time.Nanosecond
 	minPeriodNanoSec = 104
-	MinPeriod        = minPeriodNanoSec * time.Nanosecond
+	// MinPeriod is the minimum period a PWM can have
+	MinPeriod = minPeriodNanoSec * time.Nanosecond
 )
 
+// Pwm is a pulse width modulation output driver
 type Pwm struct {
-	pwmId  uint8
+	pwmID  uint8
 	pwmPin byte
 	gpio   gpio.Gpio
 }
 
-// New returns a new PWM for a given pwmId - See Edison Breakout documentation to figure out which one you want.
-func New(pwmId uint8, pwmPin byte) (*Pwm, error) {
+// New returns a new PWM for a given pwmID - See Edison Breakout documentation to figure out which one you want.
+func New(pwmID uint8, pwmPin byte) (*Pwm, error) {
 	var err error
 	var g = gpio.New(pwmPin)
 	if !g.IsExported() {
@@ -56,7 +59,7 @@ func New(pwmId uint8, pwmPin byte) (*Pwm, error) {
 		}
 	}
 
-	err = g.SetDirection(gpio.OUT)
+	err = g.SetDirection(gpio.OutDirection)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +69,7 @@ func New(pwmId uint8, pwmPin byte) (*Pwm, error) {
 		return nil, err
 	}
 
-	return &Pwm{pwmId: pwmId, pwmPin: pwmPin, gpio: g}, nil
+	return &Pwm{pwmID: pwmID, pwmPin: pwmPin, gpio: g}, nil
 }
 
 func writeTo(filename string, content string) error {
@@ -75,7 +78,7 @@ func writeTo(filename string, content string) error {
 
 // IsExported returns true with the pwm is already exported and usable from sysfs.
 func (p Pwm) IsExported() bool {
-	if _, err := os.Stat(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/", p.pwmId)); os.IsNotExist(err) {
+	if _, err := os.Stat(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/", p.pwmID)); os.IsNotExist(err) {
 		return false
 	}
 	return true
@@ -84,22 +87,22 @@ func (p Pwm) IsExported() bool {
 // Export the pwm to be usable from sysfs.
 func (p Pwm) Export() error {
 
-	return writeTo("/sys/class/pwm/pwmchip0/export", fmt.Sprintf("%d", p.pwmId))
+	return writeTo("/sys/class/pwm/pwmchip0/export", fmt.Sprintf("%d", p.pwmID))
 }
 
 // Unexport the pwm from sysfs.
 func (p Pwm) Unexport() error {
-	return writeTo("/sys/class/pwm/pwmchip0/unexport", fmt.Sprintf("%d", p.pwmId))
+	return writeTo("/sys/class/pwm/pwmchip0/unexport", fmt.Sprintf("%d", p.pwmID))
 }
 
 // SetPeriodAndDutyCycle configures the pwm for a given period and duty cycle ratio.
 // Note this might go through a transient state if the pwm is Enabled
-func (p *Pwm) SetPeriodAndDutyCycle(period time.Duration, duty_cycle float32) error {
+func (p *Pwm) SetPeriodAndDutyCycle(period time.Duration, dutyCycle float32) error {
 	if period < MinPeriod || period > MaxPeriod {
 		return fmt.Errorf("must be in 104:218453000 ns range")
 	}
 
-	if duty_cycle < 0 || duty_cycle > 1 {
+	if dutyCycle < 0 || dutyCycle > 1 {
 		return fmt.Errorf("must be in 0:1 range")
 	}
 
@@ -110,17 +113,17 @@ func (p *Pwm) SetPeriodAndDutyCycle(period time.Duration, duty_cycle float32) er
 		return err
 	}
 
-	dutyCycle := (int64)(float32(period.Nanoseconds()) * duty_cycle)
+	dutyCycleNanoSec := (int64)(float32(period.Nanoseconds()) * dutyCycle)
 
-	if err := p.setDutyCycleNanoSec(dutyCycle); err != nil {
+	if err := p.setDutyCycleNanoSec(dutyCycleNanoSec); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (p Pwm) setDutyCycleNanoSec(duty_cycle int64) error {
-	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/duty_cycle", p.pwmId), fmt.Sprintf("%d", duty_cycle))
+func (p Pwm) setDutyCycleNanoSec(dutyCycle int64) error {
+	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/duty_cycle", p.pwmID), fmt.Sprintf("%d", dutyCycle))
 }
 
 func (p Pwm) setPeriodNanoSecond(period int64) error {
@@ -129,7 +132,7 @@ func (p Pwm) setPeriodNanoSecond(period int64) error {
 		return fmt.Errorf("must be in 104:218453000 range")
 	}
 
-	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/period", p.pwmId), fmt.Sprintf("%d", period))
+	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/period", p.pwmID), fmt.Sprintf("%d", period))
 }
 
 // Enable this pwm
@@ -139,7 +142,7 @@ func (p Pwm) Enable() error {
 		return err
 	}
 
-	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/enable", p.pwmId), "1")
+	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/enable", p.pwmID), "1")
 }
 
 // Disable this pwm
@@ -149,5 +152,5 @@ func (p Pwm) Disable() error {
 		return err
 	}
 
-	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/enable", p.pwmId), "0")
+	return writeTo(fmt.Sprintf("/sys/class/pwm/pwmchip0/pwm%d/enable", p.pwmID), "0")
 }

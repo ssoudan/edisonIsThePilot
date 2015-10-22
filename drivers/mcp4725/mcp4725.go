@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-10-10 11:50:30
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-11 13:15:31
+* @Last Modified time: 2015-10-21 14:25:26
  */
 
 package mcp4725
@@ -35,10 +35,13 @@ import (
 var log = logger.Log("mcp4725")
 
 const (
-	WRITEDAC        = 0x40
-	WRITEDAC_EEPROM = 0x60
+	// writeDacCommand is the MCP4725 command to set the output
+	writeDacCommand = 0x40
+	// writedacEepromCommand is the MCP4725 command to set the output and store the value in the eeprom
+	writedacEepromCommand = 0x60
 )
 
+// MCP4725 is a driver for the MCP4725 i2c 12 bits DAC
 type MCP4725 struct {
 	bus     byte
 	address byte
@@ -46,16 +49,19 @@ type MCP4725 struct {
 }
 
 const (
-	I2C_6_SCL = 27
-	I2C_6_SDA = 28
+	// i2c6SCL is the pin number of SCL line for i2c bus number 6
+	i2c6SCL = 27
+	// i2c6SDA is the pin number of SDA line for i2c bus number 6
+	i2c6SDA = 28
 )
 
+// New creates a new MCP4725 driver on a i2c bus of the Edison
 func New(bus byte, address byte) (*MCP4725, error) {
 
 	switch bus {
 	case 6:
-		gpio.EnableI2C(I2C_6_SCL)
-		gpio.EnableI2C(I2C_6_SDA)
+		gpio.EnableI2C(i2c6SCL)
+		gpio.EnableI2C(i2c6SDA)
 		gpio.EnableFastI2C(6)
 	default:
 		log.Panic("Unknown i2c bus")
@@ -69,8 +75,9 @@ func New(bus byte, address byte) (*MCP4725, error) {
 	return &MCP4725{bus: bus, address: address, i2c: i2c}, nil
 }
 
+// SetValue sets the output value of the DAC (only the 12 lower bits are used)
 func (dac MCP4725) SetValue(value uint16) error {
-	return dac.writeRegister16(WRITEDAC, value)
+	return dac.writeRegister16(writeDacCommand, value)
 }
 
 func (dac MCP4725) writeRegister16(reg uint8, value uint16) error {

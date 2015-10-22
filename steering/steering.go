@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 17:40:00
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-04 00:00:47
+* @Last Modified time: 2015-10-21 12:31:39
  */
 
 package steering
@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
+	"github.com/ssoudan/edisonIsThePilot/infrastructure/types"
 )
 
 var log = logger.Log("steering")
@@ -37,7 +38,8 @@ const (
 	rotationSpeedInStepPerSeconds = 2 * numberOfSteps // aka 2 rotation per second
 )
 
-type Motor struct {
+// Steering is the component driving the steering wheel through an Actionner
+type Steering struct {
 	actionner Actionner
 
 	// channels
@@ -46,14 +48,15 @@ type Motor struct {
 	panicChan    chan interface{}
 }
 
+// Actionner is an interface of something that can be Enable(d)/Disable(d) and Move(d)
 type Actionner interface {
-	Enable() error
-	Disable() error
+	types.Enablable
 	Move(clockwise bool, speedInStepBySeconds uint32, duration time.Duration) error
 }
 
-func New(actionner Actionner) *Motor {
-	return &Motor{actionner: actionner, shutdownChan: make(chan interface{})}
+// New creates a new Steering component for a Actionner
+func New(actionner Actionner) *Steering {
+	return &Steering{actionner: actionner, shutdownChan: make(chan interface{})}
 }
 
 type message struct {
@@ -61,15 +64,18 @@ type message struct {
 	stayEnabled      bool
 }
 
+// NewMessage creates a new steering order
 func NewMessage(rotationInDegree float64, stayEnabled bool) interface{} {
 	return message{rotationInDegree: rotationInDegree, stayEnabled: stayEnabled}
 }
 
-func (m *Motor) SetInputChan(c chan interface{}) {
+// SetInputChan sets the channel where this component will be getting its steering order from
+func (m *Steering) SetInputChan(c chan interface{}) {
 	m.inputChan = c
 }
 
-func (m *Motor) SetPanicChan(c chan interface{}) {
+// SetPanicChan sets the channel where panics will be sent
+func (m *Steering) SetPanicChan(c chan interface{}) {
 	m.panicChan = c
 }
 
@@ -82,7 +88,7 @@ func rotationInDegreeToMove(rotationInDegree float64) (clockwise bool, speed uin
 	return
 }
 
-func (m *Motor) processMotorState(msg message) {
+func (m *Steering) processSteeringState(msg message) {
 
 	rotationInDegree := msg.rotationInDegree
 
@@ -102,27 +108,27 @@ func (m *Motor) processMotorState(msg message) {
 	}
 }
 
-func (m Motor) processMessage(msg message) {
+func (m Steering) processMessage(msg message) {
 	// no state to update
 
 	// move
-	m.processMotorState(msg)
+	m.processSteeringState(msg)
 }
 
 // Shutdown sets all the state to down and notify the handlers
-func (m Motor) Shutdown() {
+func (m Steering) Shutdown() {
 	m.shutdownChan <- 1
 	<-m.shutdownChan
 }
 
-func (m Motor) shutdown() {
+func (m Steering) shutdown() {
 	// disable the steering -- should not be Enabled()
 	m.actionner.Disable()
 	close(m.shutdownChan)
 }
 
-// Start the event loop of the Motor component
-func (m Motor) Start() {
+// Start the event loop of the Steering component
+func (m Steering) Start() {
 
 	go func() {
 

@@ -18,25 +18,30 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:02
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-03 23:08:40
+* @Last Modified time: 2015-10-21 12:48:18
  */
 
 package pilot
 
 import (
-	"time"
-	"github.com/ssoudan/edisonIsThePilot/conf"
 	"github.com/ssoudan/edisonIsThePilot/alarm"
+	"github.com/ssoudan/edisonIsThePilot/conf"
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 	"github.com/ssoudan/edisonIsThePilot/steering"
+	"time"
 )
 
 var log = logger.Log("pilot")
 
+// Pilot is the main type for the component that decide what correction to apply depending
+// on the provided course and setpoint and various other configuration parameters
 type Pilot struct {
-	heading float64 // target heading (set point)
-	bound   float64
+	heading       float64 // target heading (set point)
+	headingOffset float64
+	bound         float64
+	course        float64
+	speed         float64
 
 	alarm      Alarm
 	enabled    bool
@@ -54,13 +59,17 @@ type Pilot struct {
 	panicChan     chan interface{}
 }
 
+// Controller provides the correction for a given setpoint and error value as provided to Update
 type Controller interface {
 	Set(sp float64)
 	Update(value float64) float64
 	OutputLimits() (float64, float64)
 }
 
+// Leds is the state of all the LED (errors/warnings)
 type Leds map[Led]bool
+
+// Led is the type of a particular error/warning
 type Led string
 
 func (p *Pilot) checkHeadingError(headingError float64) Alarm {
@@ -70,9 +79,10 @@ func (p *Pilot) checkHeadingError(headingError float64) Alarm {
 
 }
 
-func ComputeHeadingError(heading float64, gpsHeading float64) float64 {
+// ComputeHeadingError determines the error to be passed to the Controller.
+func ComputeHeadingError(heading float64, gpsHeading float64, headingOffset float64) float64 {
 
-	headingError := gpsHeading - heading
+	headingError := gpsHeading + headingOffset - heading
 	if headingError > 180. {
 		headingError -= 360.
 	}
@@ -84,6 +94,7 @@ func ComputeHeadingError(heading float64, gpsHeading float64) float64 {
 	return headingError
 }
 
+// New creates a new Pilot from a particular controller.
 func New(controller Controller, bound float64) *Pilot {
 
 	return &Pilot{
@@ -93,22 +104,27 @@ func New(controller Controller, bound float64) *Pilot {
 		shutdownChan: make(chan interface{})}
 }
 
+// SetDashboardChan sets the channel to reach teh dashboard
 func (p *Pilot) SetDashboardChan(c chan interface{}) {
 	p.dashboardChan = c
 }
 
+// SetInputChan sets the channel where the gps course has to be sent
 func (p *Pilot) SetInputChan(c chan interface{}) {
 	p.inputChan = c
 }
 
+// SetAlarmChan sets the channel where the pilot send the alarm state updates
 func (p *Pilot) SetAlarmChan(c chan interface{}) {
 	p.alarmChan = c
 }
 
+// SetSteeringChan sets the channel where the pilot send the steering corrections
 func (p *Pilot) SetSteeringChan(c chan interface{}) {
 	p.steeringChan = c
 }
 
+// SetPanicChan sets the channel where the panic message have to be sent
 func (p *Pilot) SetPanicChan(c chan interface{}) {
 	p.panicChan = c
 }
@@ -133,6 +149,9 @@ func (p Pilot) tellTheWorld() {
 
 func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 
+	p.course = gpsHeading.Heading
+	p.speed = gpsHeading.Speed
+
 	// Set the heading with the current GPS heading if it has not been set before
 	if p.enabled && !p.headingSet && gpsHeading.Validity {
 		log.Info("Heading to %v", gpsHeading.Heading)
@@ -147,7 +166,7 @@ func (p *Pilot) updateFeedback(gpsHeading GPSFeedBackAction) {
 	// check the speed
 	speedAlarm := checkSpeedError(gpsHeading.Speed)
 
-	headingError := ComputeHeadingError(p.heading, gpsHeading.Heading)
+	headingError := ComputeHeadingError(p.heading, gpsHeading.Heading, p.headingOffset)
 
 	headingAlarm := !validityAlarm && !speedAlarm && p.checkHeadingError(headingError)
 
@@ -252,10 +271,14 @@ func (p Pilot) Start() {
 					p.updateFixStatus(m)
 				case GPSFeedBackAction:
 					p.updateFeedback(m)
-				case EnableAction:
+				case enableAction:
 					p.enable()
-				case DisableAction:
+				case disableAction:
 					p.disable()
+				case getInfoAction:
+					p.getInfoAction(m.backChannel)
+				case setOffsetAction:
+					p.setOffset(m.headingOffset)
 				case error:
 					log.Error("Received an error: %v", m)
 					p.updateAfterError()
@@ -285,9 +308,12 @@ func (p Pilot) computeSteeringState() bool {
 	return p.enabled && !bool(p.alarm)
 }
 
+// Alarm is true when the alarm is raised. You can use RAISED and UNRAISED const.
 type Alarm bool
 
 const (
-	RAISED   = true
+	// RAISED alarm
+	RAISED = true
+	// UNRAISED alarm
 	UNRAISED = false
 )

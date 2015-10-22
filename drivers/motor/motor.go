@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 18:58:22
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-03 22:41:26
+* @Last Modified time: 2015-10-21 13:09:34
  */
 
 package motor
@@ -33,6 +33,7 @@ import (
 
 var log = logger.Log("motor")
 
+// Motor is a driver for a stepper motor
 type Motor struct {
 	dirGPIO gpio.Gpio
 
@@ -46,7 +47,8 @@ func check(err error) {
 	}
 }
 
-func New(stepPin, stepPwmId, dirPin, sleepPin byte) *Motor {
+// New creates a new Motor for a stepper motor drived with GPIOs
+func New(stepPin, stepPwmID, dirPin, sleepPin byte) *Motor {
 
 	// Create the dir GPIO
 	err := gpio.EnableGPIO(dirPin)
@@ -58,7 +60,7 @@ func New(stepPin, stepPwmId, dirPin, sleepPin byte) *Motor {
 		check(err)
 	}
 
-	err = dirGPIO.SetDirection(gpio.OUT)
+	err = dirGPIO.SetDirection(gpio.OutDirection)
 	check(err)
 
 	// Test Disabled and Enabled state for each pin
@@ -75,7 +77,7 @@ func New(stepPin, stepPwmId, dirPin, sleepPin byte) *Motor {
 		check(err)
 	}
 
-	err = sleepGPIO.SetDirection(gpio.OUT)
+	err = sleepGPIO.SetDirection(gpio.OutDirection)
 	check(err)
 
 	// Test Disabled and Enabled state for each pin
@@ -83,7 +85,7 @@ func New(stepPin, stepPwmId, dirPin, sleepPin byte) *Motor {
 	check(err)
 
 	// Create the Step pwm
-	stepPwm, err := pwm.New(stepPwmId, stepPin)
+	stepPwm, err := pwm.New(stepPwmID, stepPin)
 	check(err)
 	if !stepPwm.IsExported() {
 		err = stepPwm.Export()
@@ -96,14 +98,17 @@ func New(stepPin, stepPwmId, dirPin, sleepPin byte) *Motor {
 	return &Motor{dirGPIO: dirGPIO, sleepGPIO: sleepGPIO, stepPwm: stepPwm}
 }
 
+// Enable enables the torque
 func (m Motor) Enable() error {
 	return m.sleepGPIO.Disable()
 }
 
+// Disable disables the torque
 func (m Motor) Disable() error {
 	return m.sleepGPIO.Enable()
 }
 
+// Move makes the motor rotate in the given direction at the specified speed for a given duration -- make sure to Enable() the motor first
 func (m Motor) Move(clockwise bool, stepsBySecond uint32, duration time.Duration) error {
 	if stepsBySecond == 0 || duration == 0 {
 		return nil
@@ -164,6 +169,7 @@ func (m Motor) Move(clockwise bool, stepsBySecond uint32, duration time.Duration
 
 }
 
+// Unexport unexports the GPIO used by to drive the motor
 func (m Motor) Unexport() {
 	m.dirGPIO.Unexport()
 	m.sleepGPIO.Unexport()

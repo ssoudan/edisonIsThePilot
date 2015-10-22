@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-24 14:30:13
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 14:33:29
+* @Last Modified time: 2015-10-21 12:19:32
  */
 
 package utils
@@ -29,6 +29,7 @@ import (
 	"syscall"
 )
 
+// WaitForInterrupt is a blocking function that wait until SIGTERM or SIGQUIT signals are received
 func WaitForInterrupt(f func()) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)

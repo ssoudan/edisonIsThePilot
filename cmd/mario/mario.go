@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:24:54
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-03 01:58:40
+* @Last Modified time: 2015-10-21 14:23:56
  */
 
 package main
@@ -33,8 +33,9 @@ import (
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 )
 
-var log = logger.Log("motorControl")
+var log = logger.Log("mario")
 
+// Options are the command line options for mario tool
 type Options struct {
 	Clockwise bool `short:"c" long:"clockwise" description:"clockwise rotation" default:"false"`
 	// Speed     uint32  `short:"s" long:"speed" description:"rotation speed pps" default:"600"`
@@ -45,14 +46,14 @@ var opts Options
 
 var parser = flags.NewParser(&opts, flags.Default)
 
-func step(motor *motor.Motor, clockwise bool, stepsBySecond uint32, duration time.Duration) {
+func doStep(motor *motor.Motor, clockwise bool, stepsBySecond uint32, duration time.Duration) {
 	motor.Enable()
 	log.Info("Moving clockwise[%v] for %v at %v[steps/s]", clockwise, duration, stepsBySecond)
 	motor.Move(clockwise, stepsBySecond, duration)
 	motor.Disable()
 }
 
-type step_ struct {
+type step struct {
 	stepsBySecond uint32
 	duration      time.Duration
 	pause         time.Duration
@@ -71,25 +72,26 @@ func main() {
 		conf.MotorDirPin,
 		conf.MotorSleepPin)
 
-	sol := step_{392, time.Duration(250 * time.Millisecond), time.Duration(0 * time.Millisecond)}
-	sol__ := step_{392, time.Duration(1000 * time.Millisecond), time.Duration(0 * time.Millisecond)}
-	la := step_{440, time.Duration(250 * time.Millisecond), time.Duration(0 * time.Millisecond)}
-	la_ := step_{440, time.Duration(500 * time.Millisecond), time.Duration(0 * time.Millisecond)}
-	si := step_{494, time.Duration(500 * time.Millisecond), time.Duration(0 * time.Millisecond)}
-	si_ := step_{494, time.Duration(250 * time.Millisecond), time.Duration(0 * time.Millisecond)}
+	sol := step{392, time.Duration(250 * time.Millisecond), time.Duration(0 * time.Millisecond)}
+	solLL := step{392, time.Duration(1000 * time.Millisecond), time.Duration(0 * time.Millisecond)}
+	la := step{440, time.Duration(250 * time.Millisecond), time.Duration(0 * time.Millisecond)}
+	laL := step{440, time.Duration(500 * time.Millisecond), time.Duration(0 * time.Millisecond)}
+	si := step{494, time.Duration(500 * time.Millisecond), time.Duration(0 * time.Millisecond)}
+	siL := step{494, time.Duration(250 * time.Millisecond), time.Duration(0 * time.Millisecond)}
 
-	steps := []step_{
+	// might be a little deceptive but this is not playing mario's theme!
+	steps := []step{
 		sol,
 		sol,
 		sol,
 		la,
 		si,
-		la_,
+		laL,
 		sol,
-		si_,
+		siL,
 		la,
 		la,
-		sol__,
+		solLL,
 		// {587, time.Duration(125 * time.Millisecond), time.Duration(125 * time.Millisecond)},
 		// {587, time.Duration(125 * time.Millisecond), time.Duration(250 * time.Millisecond)},
 		// {587, time.Duration(125 * time.Millisecond), time.Duration(250 * time.Millisecond)},
@@ -100,7 +102,7 @@ func main() {
 	}
 
 	for _, s := range steps {
-		step(motor, opts.Clockwise, s.stepsBySecond, s.duration)
+		doStep(motor, opts.Clockwise, s.stepsBySecond, s.duration)
 		time.Sleep(250 * time.Millisecond)
 	}
 

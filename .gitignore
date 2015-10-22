@@ -8,4 +8,16 @@
 edisonIsThePilot.iml
 /systemCalibration
 /ap100Control
+/webserver
 exp
+cmd/webserver/npm-debug.log
+cmd/webserver/bundle.js
+cmd/webserver/index.html
+cmd/webserver/*.woff*
+cmd/webserver/*.ttf
+cmd/webserver/*.svg
+cmd/webserver/*.eot
+cmd/webserver/webserver
+edisonIsThePilot.sublime-project
+edisonIsThePilot.sublime-workspace
+ui/npm-debug.log

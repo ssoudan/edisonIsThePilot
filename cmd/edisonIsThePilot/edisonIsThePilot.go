@@ -18,13 +18,12 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-13 17:22:05
+* @Last Modified time: 2015-10-21 16:48:53
  */
 
 package main
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/ssoudan/edisonIsThePilot/alarm"
@@ -43,10 +42,12 @@ import (
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/webserver"
 	"github.com/ssoudan/edisonIsThePilot/pilot"
 	"github.com/ssoudan/edisonIsThePilot/steering"
+	"github.com/ssoudan/edisonIsThePilot/tracer"
 )
 
 var log = logger.Log("edisonIsThePilot")
 
+// Version is the version of this code -- sets at compilation time
 var Version = "unknown"
 
 func main() {
@@ -91,19 +92,9 @@ func main() {
 		}
 	}()
 
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				panicChan <- r
-			}
-		}()
-
-		http.HandleFunc("/", webserver.VersionEndpoint(Version))
-		err := http.ListenAndServe(":8000", nil)
-		if err != nil {
-			log.Panic("Already running! or something is living on port 8000 - exiting")
-		}
-	}()
+	ws := webserver.New(Version)
+	ws.SetPanicChan(panicChan)
+	ws.Start()
 
 	////////////////////////////////////////
 	// Init the IO
@@ -125,7 +116,7 @@ func main() {
 			}
 		}
 
-		err = g.SetDirection(gpio.OUT)
+		err = g.SetDirection(gpio.OutDirection)
 		if err != nil {
 			log.Panic(err)
 		}
@@ -183,12 +174,12 @@ func main() {
 			}
 		}
 
-		err = g.SetDirection(gpio.IN)
+		err = g.SetDirection(gpio.InDirection)
 		if err != nil {
 			log.Panic(err)
 		}
 
-		err = g.SetActiveLevel(gpio.ACTIVE_HIGH)
+		err = g.SetActiveLevel(gpio.ActiveHigh)
 		if err != nil {
 			log.Panic(err)
 		}
@@ -278,6 +269,7 @@ func main() {
 	for m, g := range dashboardGPIOs {
 		dashboard.RegisterMessageHandler(m, g)
 	}
+	ws.SetDashboard(dashboard)
 
 	////////////////////////////////////////
 	// an astonishing steering
@@ -286,6 +278,15 @@ func main() {
 	steeringChan := make(chan interface{})
 	steering.SetInputChan(steeringChan)
 	steering.SetPanicChan(panicChan)
+
+	////////////////////////////////////////
+	// a stunning tracer
+	////////////////////////////////////////
+	tracer := tracer.New(conf.Conf.TraceSize)
+	tracerChan := make(chan interface{})
+	tracer.SetInputChan(tracerChan)
+	tracer.SetPanicChan(panicChan)
+	ws.SetTracer(tracer)
 
 	////////////////////////////////////////
 	// an amazing PID
@@ -308,6 +309,7 @@ func main() {
 	thePilot.SetAlarmChan(alarmChan)
 	thePilot.SetSteeringChan(steeringChan)
 	thePilot.SetPanicChan(panicChan)
+	ws.SetPilot(thePilot)
 
 	////////////////////////////////////////
 	// a surprising input
@@ -331,7 +333,10 @@ func main() {
 	gps.SetHeadingChan(headingChan)
 	gps.SetErrorChan(pilotChan)
 	gps.SetPanicChan(panicChan)
+	gps.SetTracerChan(tracerChan)
 
+	tracer.Start()
+	defer tracer.Shutdown()
 	ap100.Start()
 	defer ap100.Shutdown()
 	gps.Start()

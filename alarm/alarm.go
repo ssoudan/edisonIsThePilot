@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-21 15:42:21
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-29 12:31:14
+* @Last Modified time: 2015-10-21 14:21:19
  */
 
 package alarm
@@ -27,12 +27,14 @@ import (
 	"sync"
 
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
+	"github.com/ssoudan/edisonIsThePilot/infrastructure/types"
 )
 
 var log = logger.Log("alarm")
 
+// Alarm is the component that manage the external alarm
 type Alarm struct {
-	alarmHandler Enablable
+	alarmHandler types.Enablable
 
 	mu         sync.RWMutex
 	alarmState bool // protected by mu
@@ -43,12 +45,8 @@ type Alarm struct {
 	panicChan    chan interface{}
 }
 
-type Enablable interface {
-	Enable() error
-	Disable() error
-}
-
-func New(alarmHandler Enablable) *Alarm {
+// New creates a new Alarm component for an types.Enablable
+func New(alarmHandler types.Enablable) *Alarm {
 	return &Alarm{alarmHandler: alarmHandler, shutdownChan: make(chan interface{})}
 }
 
@@ -56,18 +54,22 @@ type message struct {
 	alarm bool
 }
 
+// NewMessage creates a new alarm state update message
 func NewMessage(alarm bool) interface{} {
 	return message{alarm: alarm}
 }
 
+// SetInputChan sets the channel where the alarm updates are sent
 func (d *Alarm) SetInputChan(c chan interface{}) {
 	d.inputChan = c
 }
 
+// SetPanicChan sets the channel where this component will send the panics
 func (d *Alarm) SetPanicChan(c chan interface{}) {
 	d.panicChan = c
 }
 
+// Enabled is true when the alarm is raised, false otherwise
 func (d *Alarm) Enabled() bool {
 	d.mu.RLock()
 	defer d.mu.RUnlock()

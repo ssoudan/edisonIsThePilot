@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-03-31 21:34:39
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 14:21:04
+* @Last Modified time: 2015-10-21 12:14:00
  */
 
 package logger
@@ -29,6 +29,7 @@ import (
 	"os"
 )
 
+// Log creates a new named Logger
 func Log(name string) *logging.Logger {
 	return logging.MustGetLogger(name)
 }

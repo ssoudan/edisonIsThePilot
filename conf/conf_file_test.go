@@ -17,32 +17,32 @@ under the License.
 /*
 * @Author: Philippe Martinez
 * @Date:   2015-10-18 19:25:31
-* @Last Modified by:   Philippe Martinez
-* @Last Modified time: 2015-10-18 19:25:31
+* @Last Modified by:   Sebastien Soudan
+* @Last Modified time: 2015-10-22 15:15:07
  */
 
 package conf
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
+
+	"testing"
 )
 
-
-func TestUnMarshallingDefaultConfig(t *testing.T){
-	assert.EqualValues(t, 2.23108985822891,Conf.N)
-	assert.EqualValues(t, "/dev/ttyMFD1",Conf.GpsSerialPort)
-	assert.EqualValues(t,25.,Conf.Bounds)
-	assert.EqualValues(t,-25*(380/25),Conf.MinPIDOutputLimits)
+func TestUnMarshallingDefaultConfig(t *testing.T) {
+	assert.EqualValues(t, 2.23108985822891, Conf.N)
+	assert.EqualValues(t, "/dev/ttyMFD1", Conf.GpsSerialPort)
+	assert.EqualValues(t, 25., Conf.Bounds)
+	assert.EqualValues(t, -25*380/25, Conf.MinPIDOutputLimits)
 }
 
-func TestUnMarshallingFromFile(t *testing.T){
+func TestUnMarshallingFromFile(t *testing.T) {
 	viper.AddConfigPath(".")
 	var localConf = loadConfiguration()
-	assert.EqualValues(t, 2.13108985822891,localConf.N)
-	assert.EqualValues(t, "/dev/bla",localConf.GpsSerialPort)
-	assert.EqualValues(t,5.,localConf.Bounds)
+	assert.EqualValues(t, 2.13108985822891, localConf.N)
+	assert.EqualValues(t, "/dev/bla", localConf.GpsSerialPort)
+	assert.EqualValues(t, 5., localConf.Bounds)
 	//check a default value
-	assert.EqualValues(t,0.104659039843542, localConf.P)
+	assert.EqualValues(t, 0.104659039843542, localConf.P)
 }

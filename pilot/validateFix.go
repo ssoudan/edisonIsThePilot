@@ -18,17 +18,19 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 22:08:20
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 22:17:28
+* @Last Modified time: 2015-10-21 14:16:45
  */
 
 package pilot
 
+// FixStatus is the status of the GPS fix
 type FixStatus byte
 
+// Values for FixStatus
 const (
-	NOFIX    = 0
-	FIX      = 1
-	DGPS_FIX = 2
+	NoFix   = 0
+	Fix     = 1
+	DGpsFix = 2
 )
 
 func validateFixStatus(fix FixStatus) (alarm Alarm, ledEnabled bool) {
@@ -36,12 +38,12 @@ func validateFixStatus(fix FixStatus) (alarm Alarm, ledEnabled bool) {
 	ledEnabled = false
 
 	switch fix {
-	case NOFIX:
+	case NoFix:
 
 		alarm = RAISED
 		ledEnabled = true
 
-	case FIX, DGPS_FIX:
+	case Fix, DGpsFix:
 		// blah
 	}
 

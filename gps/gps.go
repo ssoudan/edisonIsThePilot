@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 17:13:41
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-13 17:33:43
+* @Last Modified time: 2015-10-21 16:37:18
  */
 
 package gps
@@ -31,7 +31,9 @@ import (
 
 	"github.com/ssoudan/edisonIsThePilot/ap100"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
+	"github.com/ssoudan/edisonIsThePilot/infrastructure/types"
 	"github.com/ssoudan/edisonIsThePilot/pilot"
+	"github.com/ssoudan/edisonIsThePilot/tracer"
 
 	"github.com/adrianmo/go-nmea"
 	"github.com/tarm/serial"
@@ -39,6 +41,7 @@ import (
 
 var log = logger.Log("gps")
 
+// GPS is a driver for a serial attached NMEA GPS
 type GPS struct {
 	deviceName string
 	baud       int
@@ -48,6 +51,7 @@ type GPS struct {
 	headingChan  chan interface{}
 	errorChan    chan interface{}
 	panicChan    chan interface{}
+	tracerChan   chan interface{}
 }
 
 // New creates a new GPS component
@@ -55,20 +59,29 @@ func New(deviceName string) GPS {
 	return GPS{deviceName: deviceName, baud: 9600}
 }
 
+// SetMessagesChan sets the channel where the GPS messages are delivered
 func (g *GPS) SetMessagesChan(c chan interface{}) {
 	g.messagesChan = c
 }
 
+// SetHeadingChan sets the channel to the AP100 interface
 func (g *GPS) SetHeadingChan(c chan interface{}) {
 	g.headingChan = c
 }
 
+// SetErrorChan sets the channel where parsing errors are posted
 func (g *GPS) SetErrorChan(c chan interface{}) {
 	g.errorChan = c
 }
 
+// SetPanicChan sets the channel where panics are sent
 func (g *GPS) SetPanicChan(c chan interface{}) {
 	g.panicChan = c
+}
+
+// SetTracerChan sets the channel to the tracer
+func (g *GPS) SetTracerChan(c chan interface{}) {
+	g.tracerChan = c
 }
 
 func (g GPS) doReceiveGPSMessages() {
@@ -138,7 +151,13 @@ func (g GPS) doReceiveGPSMessages() {
 			}
 			if t.Validity == "A" {
 				g.headingChan <- ap100.NewMessage(uint16(t.Course))
+				g.tracerChan <- tracer.MkAddPointMessage(types.Point{
+					Latitude:  float64(t.Latitude),
+					Longitude: float64(t.Longitude),
+					Time:      types.JSONTime(time.Now()),
+				})
 			}
+
 		}
 	}
 }
@@ -156,7 +175,7 @@ func (g GPS) Start() {
 
 		for {
 			g.doReceiveGPSMessages()
-			time.Sleep(1 * time.Second)
+			time.Sleep(1 * time.Second) // Cooldown in case of repeated errors
 		}
 
 	}()

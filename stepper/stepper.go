@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-29 10:43:34
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-03 23:01:03
+* @Last Modified time: 2015-10-21 15:41:44
  */
 
 package stepper
@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
+	"github.com/ssoudan/edisonIsThePilot/infrastructure/types"
 	"github.com/ssoudan/edisonIsThePilot/pilot"
 	"github.com/ssoudan/edisonIsThePilot/steering"
 
@@ -40,50 +41,40 @@ import (
 
 var log = logger.Log("stepper")
 
-type JSONTime time.Time
-
-func (t JSONTime) MarshalJSON() ([]byte, error) {
-	stamp := fmt.Sprintf("\"%d\"", time.Time(t).Unix())
-	return []byte(stamp), nil
-}
-
+// Input is the definition of a step
 type Input struct {
-	Duration JSONDuration
+	Duration types.JSONDuration
 	Heading  float64
 	Step     float64
 }
 
-type JSONDuration time.Duration
-
-func (d JSONDuration) MarshalJSON() ([]byte, error) {
-	stamp := fmt.Sprintf("\"%f\"", time.Duration(d).Seconds())
-	return []byte(stamp), nil
-}
-
+// Point is the structure collected when a step is RUNNING
 type Point struct {
-	Timestamp      JSONTime
-	Fix_time       string
-	Fix_date       string
-	Course         float64
-	Speed          float64
-	Delta_steering float64
-	Latitude       nmea.LatLong
-	Longitude      nmea.LatLong
-	Validity       bool
+	Timestamp     types.JSONTime
+	FixTime       string
+	FixDate       string
+	Course        float64
+	Speed         float64
+	DeltaSteering float64
+	Latitude      nmea.LatLong
+	Longitude     nmea.LatLong
+	Validity      bool
 }
 
+// state value
 const (
 	UNDEFINED = iota
-
-	ARMED   = iota
-	GO      = iota
-	RUNNING = iota
-	DONE    = iota
-	ABORTED = iota
+	ARMED     = iota
+	GO        = iota
+	RUNNING   = iota
+	DONE      = iota
+	ABORTED   = iota
 )
 
+// State of a step
 type State int
 
+// MarshalJSON does the JSON serialization of a State
 func (d State) MarshalJSON() ([]byte, error) {
 	field := "UNKNOWN"
 	switch d {
@@ -102,15 +93,16 @@ func (d State) MarshalJSON() ([]byte, error) {
 }
 
 type plan struct {
-	State        State
-	Start        JSONTime
-	Test_type    string
-	Plot_command string
-	Input        Input
-	Points       []Point
-	Description  string
+	State       State
+	Start       types.JSONTime
+	TestType    string
+	PlotCommand string
+	Input       Input
+	Points      []Point
+	Description string
 }
 
+// Stepper is a component that execute steering plans and collect the position as it runs
 type Stepper struct {
 	mu   sync.RWMutex
 	plan plan // protected by mu
@@ -122,6 +114,7 @@ type Stepper struct {
 	panicChan    chan interface{}
 }
 
+// New creates a new Stepper component
 func New() *Stepper {
 	return &Stepper{shutdownChan: make(chan interface{}), plan: plan{State: UNDEFINED}}
 }
@@ -132,96 +125,104 @@ type message struct {
 	description string
 }
 
-func NewStep(step float64, duration time.Duration, description string) interface{} {
+// NewStep creates a new step
+func (s Stepper) NewStep(step float64, duration time.Duration, description string) {
+	s.inputChan <- newStep(step, duration, description)
+}
+
+func newStep(step float64, duration time.Duration, description string) interface{} {
 	return message{step: step, duration: duration, description: description}
 }
 
-func (d *Stepper) SetInputChan(c chan interface{}) {
-	d.inputChan = c
+// SetInputChan sets the channel where the Stepper will be getting new step messages from
+func (s *Stepper) SetInputChan(c chan interface{}) {
+	s.inputChan = c
 }
 
-func (d *Stepper) SetPanicChan(c chan interface{}) {
-	d.panicChan = c
+// SetPanicChan sets the channel where panics are sent
+func (s *Stepper) SetPanicChan(c chan interface{}) {
+	s.panicChan = c
 }
 
-func (d *Stepper) SetSteeringChan(c chan interface{}) {
-	d.steeringChan = c
+// SetSteeringChan sets the channel where the Stepper will send steering order to
+func (s *Stepper) SetSteeringChan(c chan interface{}) {
+	s.steeringChan = c
 }
 
-type EnableAction struct {
+type enableAction struct {
 }
 
-type DisableAction struct {
+type disableAction struct {
 }
 
 // Enable the autopilot
-func (d *Stepper) Enable() error {
-	d.inputChan <- EnableAction{}
+func (s *Stepper) Enable() error {
+	s.inputChan <- enableAction{}
 	return nil
 }
 
 // Disable the autopilot
-func (d *Stepper) Disable() error {
-	d.inputChan <- DisableAction{}
+func (s *Stepper) Disable() error {
+	s.inputChan <- disableAction{}
 	return nil
 }
 
-func (d *Stepper) processNewStepMessage(m message) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+func (s *Stepper) processNewStepMessage(m message) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	if d.plan.State == UNDEFINED {
-		d.plan.State = ARMED
-		d.plan.Test_type = fmt.Sprintf("bump test of %f", m.step)
-		d.plan.Input.Duration = JSONDuration(m.duration)
-		d.plan.Input.Step = m.step
-		d.plan.Description = m.description
+	if s.plan.State == UNDEFINED {
+		s.plan.State = ARMED
+		s.plan.TestType = fmt.Sprintf("bump test of %f", m.step)
+		s.plan.Input.Duration = types.JSONDuration(m.duration)
+		s.plan.Input.Step = m.step
+		s.plan.Description = m.description
 	}
 
 }
 
-func (d *Stepper) processGPSMessage(m pilot.GPSFeedBackAction) {
+func (s *Stepper) processGPSMessage(m pilot.GPSFeedBackAction) {
 	// Update the state
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	now := time.Now()
 
-	switch d.plan.State {
+	switch s.plan.State {
 
 	case GO:
-		d.plan.Input.Heading = m.Heading
-		d.plan.State = RUNNING
-		d.plan.Points = []Point{{
-			Timestamp:      JSONTime(now),
-			Fix_date:       m.Date,
-			Fix_time:       m.Time,
-			Course:         m.Heading,
-			Speed:          m.Speed,
-			Delta_steering: d.plan.Input.Step,
-			Latitude:       m.Latitude,
-			Longitude:      m.Longitude,
-			Validity:       m.Validity,
+		s.plan.Input.Heading = m.Heading
+		s.plan.State = RUNNING
+		s.plan.Points = []Point{{
+			Timestamp:     types.JSONTime(now),
+			FixDate:       m.Date,
+			FixTime:       m.Time,
+			Course:        m.Heading,
+			Speed:         m.Speed,
+			DeltaSteering: s.plan.Input.Step,
+			Latitude:      m.Latitude,
+			Longitude:     m.Longitude,
+			Validity:      m.Validity,
 		}}
-		d.plan.Start = JSONTime(now)
+		s.plan.Start = types.JSONTime(now)
 
 		// send message to steering -- that's where we punch the system
-		d.steeringChan <- steering.NewMessage(d.plan.Input.Step, true)
+		s.steeringChan <- steering.NewMessage(s.plan.Input.Step, true)
 
 	case RUNNING:
-		d.plan.Points = append(d.plan.Points, Point{
-			Timestamp:      JSONTime(now),
-			Fix_date:       m.Date,
-			Fix_time:       m.Time,
-			Course:         m.Heading,
-			Speed:          m.Speed,
-			Delta_steering: 0,
-			Latitude:       m.Latitude,
-			Longitude:      m.Longitude,
-			Validity:       m.Validity,
+		s.plan.Points = append(s.plan.Points, Point{
+			Timestamp:     types.JSONTime(now),
+			FixDate:       m.Date,
+			FixTime:       m.Time,
+			Course:        m.Heading,
+			Speed:         m.Speed,
+			DeltaSteering: 0,
+			Latitude:      m.Latitude,
+			Longitude:     m.Longitude,
+			Validity:      m.Validity,
 		})
 
-		if time.Time(d.plan.Start).Add(time.Duration(d.plan.Input.Duration)).Before(now) {
+		if time.Time(s.plan.Start).Add(time.Duration(s.plan.Input.Duration)).Before(now) {
 			// Time is up
 			// write to file
 			f, err := os.Create("/tmp/systemCalibration-" + time.Now().Format(time.RFC3339))
@@ -230,14 +231,14 @@ func (d *Stepper) processGPSMessage(m pilot.GPSFeedBackAction) {
 				break
 			}
 			defer f.Close()
-			json.NewEncoder(f).Encode(d.plan)
+			json.NewEncoder(f).Encode(s.plan)
 
 			// tell the pilot the calibration test is over and data can be collected
 			log.Notice("The bump test is over. You can disable the autopilot, stop the program and start another test.")
 
-			d.steeringChan <- steering.NewMessage(0, false)
+			s.steeringChan <- steering.NewMessage(0, false)
 
-			d.plan.State = DONE
+			s.plan.State = DONE
 		}
 	case DONE:
 		// Nothing
@@ -245,74 +246,74 @@ func (d *Stepper) processGPSMessage(m pilot.GPSFeedBackAction) {
 
 }
 
-func (d *Stepper) enable() {
+func (s *Stepper) enable() {
 	// Update the state
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	switch d.plan.State {
+	switch s.plan.State {
 	case ARMED:
-		d.plan.State = GO
+		s.plan.State = GO
 	}
 }
 
-func (d *Stepper) disable() {
+func (s *Stepper) disable() {
 	// Update the state
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	if d.plan.State != DONE {
-		d.plan.State = ABORTED
+	if s.plan.State != DONE {
+		s.plan.State = ABORTED
 	}
 
 }
 
 // Shutdown sets all the state to down and notify the handlers
-func (d *Stepper) Shutdown() {
+func (s *Stepper) Shutdown() {
 
-	d.shutdownChan <- 1
-	<-d.shutdownChan
+	s.shutdownChan <- 1
+	<-s.shutdownChan
 }
 
-func (d *Stepper) shutdown() {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+func (s *Stepper) shutdown() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	if d.plan.State != DONE {
-		d.plan.State = ABORTED
+	if s.plan.State != DONE {
+		s.plan.State = ABORTED
 	}
 
-	close(d.shutdownChan)
+	close(s.shutdownChan)
 }
 
 // Start the event loop of the Stepper component
-func (d *Stepper) Start() {
+func (s *Stepper) Start() {
 
 	go func() {
 
 		defer func() {
 			if r := recover(); r != nil {
-				d.panicChan <- r
+				s.panicChan <- r
 			}
 		}()
 
 		for {
 			select {
-			case m := <-d.inputChan:
+			case m := <-s.inputChan:
 				switch m := m.(type) {
 				case pilot.GPSFeedBackAction:
-					d.processGPSMessage(m)
+					s.processGPSMessage(m)
 				case message:
-					d.processNewStepMessage(m)
-				case EnableAction:
-					d.enable()
-				case DisableAction:
-					d.disable()
+					s.processNewStepMessage(m)
+				case enableAction:
+					s.enable()
+				case disableAction:
+					s.disable()
 				case error:
 					log.Error("Received an error: %v", m)
 				}
-			case <-d.shutdownChan:
-				d.shutdown()
+			case <-s.shutdownChan:
+				s.shutdown()
 
 				return
 			}
@@ -322,11 +323,12 @@ func (d *Stepper) Start() {
 
 }
 
-func (d *Stepper) CalibrationEndpoint(w http.ResponseWriter, r *http.Request) {
+// CalibrationEndpoint is a rest endpoint to get the current status of a plan
+func (s *Stepper) CalibrationEndpoint(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	err := json.NewEncoder(w).Encode(d.plan)
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	err := json.NewEncoder(w).Encode(s.plan)
 	if err != nil {
 		log.Error("Failed to encode %v", err)
 	}

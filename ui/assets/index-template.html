@@ -1,0 +1,47 @@
+<!doctype html>
+<html {% if(o.htmlWebpackPlugin.files.manifest) { %} manifest="{%= o.htmlWebpackPlugin.files.manifest %}" {% } %}>
+
+
+<head>
+    <meta charset="utf-8">
+    {% if (o.htmlWebpackPlugin.files.favicon) { %}
+    <link rel="shortcut icon" href="{%=o.htmlWebpackPlugin.files.favicon%}">
+    {% } %}
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>{%=o.htmlWebpackPlugin.options.title || 'Webpack App'%}</title>
+    <meta name="description" content="{%=o.htmlWebpackPlugin.options.description || 'An App'%}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% for (var css in o.htmlWebpackPlugin.files.css) { %}
+    <link href="{%=o.htmlWebpackPlugin.files.css[css] %}" rel="stylesheet">
+
+    {% } %}
+    <script type="text/javascript"
+            src="https://maps.googleapis.com/maps/api/js?v=3.exp&libraries=geometry,drawing,visualization"/>
+
+    <!-- This script adds the Roboto font to our project. For more detail go to this site:  http://www.google.com/fonts#UsePlace:use/Collection:Roboto:400,300,500 -->
+    <script>
+        var WebFontConfig = {
+            google: {families: ['Roboto:400,300,500:latin']}
+        };
+        (function () {
+            var wf = document.createElement('script');
+            wf.src = ('https:' == document.location.protocol ? 'https' : 'http') +
+                    '://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js';
+            wf.type = 'text/javascript';
+            wf.async = 'true';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(wf, s);
+        })();
+    </script>
+
+</head>
+
+<body>
+{% for (var chunk in o.htmlWebpackPlugin.files.chunks) { %}
+<script src="{%=o.htmlWebpackPlugin.files.chunks[chunk].entry %}"></script>
+{% } %}
+
+</body>
+
+</html>
+

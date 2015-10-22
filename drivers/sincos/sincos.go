@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-10-12 19:20:55
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-13 17:23:52
+* @Last Modified time: 2015-10-21 12:12:32
  */
 
 package sincos
@@ -43,13 +43,14 @@ func ToSinCos(theta uint16) (uint16, uint16) {
 	return uint16(sf), uint16(cf)
 }
 
-type SinCosInterface struct {
+// SinCos is a Sine/Cosine interace -- based on two MCP4725 DACs -- as used by AP100 autopilot to get the heading
+type SinCos struct {
 	sin *mcp4725.MCP4725
 	cos *mcp4725.MCP4725
 }
 
-// New creates a new SinCosInterface interface (through 2 MCP4725 on an i2c bus)
-func New(bus, sinAddr, cosAddr byte) *SinCosInterface {
+// New creates a new SinCos interface (through 2 MCP4725 on an i2c bus)
+func New(bus, sinAddr, cosAddr byte) *SinCos {
 
 	sin, err := mcp4725.New(bus, sinAddr)
 	if err != nil {
@@ -61,11 +62,11 @@ func New(bus, sinAddr, cosAddr byte) *SinCosInterface {
 		log.Panic(err)
 	}
 
-	return &SinCosInterface{sin: sin, cos: cos}
+	return &SinCos{sin: sin, cos: cos}
 }
 
 // UpdateCourse sets the Sin/Cos outputs to the values that correspond to the provided course (in degree)
-func (ap SinCosInterface) UpdateCourse(theta uint16) error {
+func (ap SinCos) UpdateCourse(theta uint16) error {
 	ss, cc := ToSinCos(theta)
 	err := ap.sin.SetValue(ss)
 	if err != nil {

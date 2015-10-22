@@ -23,7 +23,7 @@ Useful in case you are on Mac and want to build go toolchain for linux x86:
 	$ GOARCH=386 GOOS=linux go build cmd/edisonIsThePilot/edisonIsThePilot.go
 	$ scp edisonIsThePilot root@edison.local.:
 
-or you use the Makefile.
+or you can use the Makefile:
 
     $ make 
     $ make deploy 

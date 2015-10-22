@@ -1,0 +1,37 @@
+/* custom font icons */
+/*@import "font-icons/style.css";*/
+
+a {
+    color: #334081;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+html {
+    font-family: 'Roboto', sans-serif;
+}
+
+body, h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+}
+
+body {
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.alert {
+    color: red;
+}
+
+canvas {
+    position: absolute;
+    top:0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin:auto;
+}

@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-26 17:50:09
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-30 12:45:51
+* @Last Modified time: 2015-10-21 13:10:36
  */
 
 package main
@@ -49,7 +49,7 @@ func main() {
 			}
 		}
 
-		err = g.SetDirection(gpio.OUT)
+		err = g.SetDirection(gpio.OutDirection)
 		if err != nil {
 			log.Panic(err)
 		}
