@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-10-21 15:37:36
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-21 16:29:47
+* @Last Modified time: 2015-10-22 18:10:06
  */
 
 package tracer
@@ -81,7 +81,7 @@ func (t *Tracer) processPoint(point types.Point) {
 			t.nextPosition = 0
 			t.fullyInitialized = true
 		} else {
-			t.nextPosition += 1
+			t.nextPosition++
 		}
 	}
 
@@ -116,11 +116,10 @@ func (t *Tracer) getPoints() []types.Point {
 		output := make([]types.Point, t.maxPoints)
 		copy(output, t.points)
 		return output
-	} else {
-		output := make([]types.Point, t.nextPosition)
-		copy(output, t.points)
-		return output
 	}
+	output := make([]types.Point, t.nextPosition)
+	copy(output, t.points)
+	return output
 }
 
 // Start the event loop of the Tracer component

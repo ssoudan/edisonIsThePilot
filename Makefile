@@ -54,9 +54,11 @@ FMT_LIST = $(foreach int, $(ALL_LIST), $(int)_fmt)
 .PHONY: $(CLEAN_LIST) $(TEST_LIST) $(FMT_LIST) $(INSTALL_LIST) $(BUILD_LIST) $(IREF_LIST) ui
 
 all: build
+lint: 
+	golint ./...
 ui: 
 	cd ui ; npm install ; npm run bundle
-build: $(BUILD_LIST) ui
+build: lint $(BUILD_LIST) ui
 clean: $(CLEAN_LIST)
 	rm -f cmd/webserver/*.svg cmd/webserver/*.html cmd/webserver/*.js cmd/webserver/*.log 
 	rm -f cmd/webserver/*.ttf cmd/webserver/*.woff* cmd/webserver/*.eot cmd/webserver/webserver
