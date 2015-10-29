@@ -17,16 +17,20 @@ Useful in case you are on Mac and want to build go toolchain for linux x86:
 	$ export GOROOT_BOOTSTRAP=$GOROOT
 	$ GOOS=linux GOARCH=386 ./make.bash --no-clean
 
+## Install golint
+
+	$ go get -u github.com/golang/lint/golint
+
 ## Build the project
 
-    $ GOARCH=386 GOOS=linux go get ./...
+	$ GOARCH=386 GOOS=linux go get ./...
 	$ GOARCH=386 GOOS=linux go build cmd/edisonIsThePilot/edisonIsThePilot.go
 	$ scp edisonIsThePilot root@edison.local.:
 
 or you can use the Makefile:
 
-    $ make 
-    $ make deploy 
+	$ make 
+	$ make deploy 
 
 to build and copy everything to edison.local. Note this will also add a systemd service and start it.
 
