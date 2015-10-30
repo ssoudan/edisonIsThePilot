@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-29 10:43:34
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-21 15:41:44
+* @Last Modified time: 2015-10-29 23:05:01
  */
 
 package stepper
@@ -66,6 +66,7 @@ const (
 	UNDEFINED = iota
 	ARMED     = iota
 	GO        = iota
+	PREPARING = iota
 	RUNNING   = iota
 	DONE      = iota
 	ABORTED   = iota
@@ -88,6 +89,8 @@ func (d State) MarshalJSON() ([]byte, error) {
 		field = "\"DONE\""
 	case ABORTED:
 		field = "\"ABORTED\""
+	case PREPARING:
+		field = "\"PREPARING\""
 	}
 	return []byte(field), nil
 }
@@ -192,22 +195,51 @@ func (s *Stepper) processGPSMessage(m pilot.GPSFeedBackAction) {
 
 	case GO:
 		s.plan.Input.Heading = m.Heading
-		s.plan.State = RUNNING
+		s.plan.State = PREPARING
+		s.plan.Start = types.JSONTime(now)
 		s.plan.Points = []Point{{
 			Timestamp:     types.JSONTime(now),
 			FixDate:       m.Date,
 			FixTime:       m.Time,
 			Course:        m.Heading,
 			Speed:         m.Speed,
-			DeltaSteering: s.plan.Input.Step,
+			DeltaSteering: 0,
 			Latitude:      m.Latitude,
 			Longitude:     m.Longitude,
 			Validity:      m.Validity,
 		}}
-		s.plan.Start = types.JSONTime(now)
 
-		// send message to steering -- that's where we punch the system
-		s.steeringChan <- steering.NewMessage(s.plan.Input.Step, true)
+	case PREPARING:
+		if time.Time(s.plan.Start).Add(time.Duration(s.plan.Input.Duration)).Before(now) {
+			// send message to steering -- that's where we punch the system
+			s.steeringChan <- steering.NewMessage(s.plan.Input.Step, true)
+
+			s.plan.Points = append(s.plan.Points, Point{
+				Timestamp:     types.JSONTime(now),
+				FixDate:       m.Date,
+				FixTime:       m.Time,
+				Course:        m.Heading,
+				Speed:         m.Speed,
+				DeltaSteering: s.plan.Input.Step,
+				Latitude:      m.Latitude,
+				Longitude:     m.Longitude,
+				Validity:      m.Validity,
+			})
+
+			s.plan.State = RUNNING
+		} else {
+			s.plan.Points = append(s.plan.Points, Point{
+				Timestamp:     types.JSONTime(now),
+				FixDate:       m.Date,
+				FixTime:       m.Time,
+				Course:        m.Heading,
+				Speed:         m.Speed,
+				DeltaSteering: 0,
+				Latitude:      m.Latitude,
+				Longitude:     m.Longitude,
+				Validity:      m.Validity,
+			})
+		}
 
 	case RUNNING:
 		s.plan.Points = append(s.plan.Points, Point{
@@ -222,7 +254,7 @@ func (s *Stepper) processGPSMessage(m pilot.GPSFeedBackAction) {
 			Validity:      m.Validity,
 		})
 
-		if time.Time(s.plan.Start).Add(time.Duration(s.plan.Input.Duration)).Before(now) {
+		if time.Time(s.plan.Start).Add(time.Duration(2 * s.plan.Input.Duration)).Before(now) {
 			// Time is up
 			// write to file
 			f, err := os.Create("/tmp/systemCalibration-" + time.Now().Format(time.RFC3339))
@@ -242,6 +274,7 @@ func (s *Stepper) processGPSMessage(m pilot.GPSFeedBackAction) {
 		}
 	case DONE:
 		// Nothing
+		log.Notice("DONE")
 	}
 
 }
