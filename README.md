@@ -7,7 +7,7 @@ You can find the latest version <a href="https://github.com/ssoudan/edisonIsTheP
 
 This is intended to become an autopilot at some point.
 
-For more information about the design check [this](DESIGN.md).
+For more information about the design check [this](DESIGN.md) or read [that](http://ssoudan.eu/posts/2015-10-30-edisonIsThePilot.html).
 
 ## Build the toolchain
 
