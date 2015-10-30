@@ -328,7 +328,7 @@ The error is centered on 0 and varies from -180 (excluded) to 180 (included).
 The output of the PID is fed to the steering module which interpret this as the 
 rotation to be done in one direction or the other. 
 
-We use the following out own implementation of a PID with filtered derivative.
+We use our own implementation of a PID with filtered derivative.
 
 #### 3.4.5 Software Architecture
 
@@ -367,7 +367,7 @@ To check the status of the service:
 #### Log rotation
 <!-- `edisonIsThePilot` writes both to stderr and '/var/log/edisonIsThePilot.log'. When the program is started or when the size of the file gets greater than 40MB (check performed every `logger.maxWriteCountWithoutCheck` writes), 
 the file is rotated to /var/log/edisonIsThePilot.log.old (previous edisonIsThePilot.log.old is deleted) and a new '/var/log/edisonIsThePilot.log' is created. -->
-Logs are managed by journalctl. It's configuration is changed to limit the maximum amount of logs it keeps.
+Logs are managed by journalctl. Its configuration has been changed to limit the maximum amount of logs it keeps.
 
 They can be watched with: 
 

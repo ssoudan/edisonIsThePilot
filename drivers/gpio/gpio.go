@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 14:10:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-22 12:49:29
+* @Last Modified time: 2015-10-22 14:59:12
  */
 
 package gpio
@@ -30,14 +30,34 @@ import (
 )
 
 const (
-	IN          = "in"
-	OUT         = "out"
-	ACTIVE_HIGH = "0"
-	ACTIVE_LOW  = "1"
-	HIGH        = "1\n"
-	LOW         = "0\n"
+	// InDirection is the direction for input GPIO
+	InDirection = "in"
+	// OutDirection is the direction for output GPIO
+	OutDirection = "out"
 )
 
+const (
+	// ActiveHigh is the state for active high input GPIO
+	ActiveHigh = "0"
+	// ActiveLow is the state for active low input GPIO
+	ActiveLow = "1"
+)
+
+const (
+	high = "1\n"
+	low  = "0\n"
+)
+
+const (
+	sysfsGpioValue     = "/sys/class/gpio/gpio%d/value"
+	sysfsGpioDirection = "/sys/class/gpio/gpio%d/direction"
+	sysfsGpioDir       = "/sys/class/gpio/gpio%d/"
+	sysfsGpioExport    = "/sys/class/gpio/export"
+	sysfsGpioUnexport  = "/sys/class/gpio/unexport"
+	sysfsGpioActiveLow = "/sys/class/gpio/gpio%d/active_low"
+)
+
+// Gpio is a general purpose I/O of the Edison
 type Gpio struct {
 	pin uint8
 }
@@ -61,7 +81,7 @@ func readfrom(filename string) (string, error) {
 
 // IsExported returns true with the gpio is already exported and usable from sysfs.
 func (p Gpio) IsExported() bool {
-	if _, err := os.Stat(fmt.Sprintf("/sys/class/gpio/gpio%d/", p.pin)); os.IsNotExist(err) {
+	if _, err := os.Stat(fmt.Sprintf(sysfsGpioDir, p.pin)); os.IsNotExist(err) {
 		return false
 	}
 	return true
@@ -69,40 +89,40 @@ func (p Gpio) IsExported() bool {
 
 // Export the gpio to be usable from sysfs.
 func (p Gpio) Export() error {
-	return writeTo("/sys/class/gpio/export", fmt.Sprintf("%d", p.pin))
+	return writeTo(sysfsGpioExport, fmt.Sprintf("%d", p.pin))
 }
 
 // Unexport the gpio from sysfs.
 func (p Gpio) Unexport() error {
-	return writeTo("/sys/class/gpio/unexport", fmt.Sprintf("%d", p.pin))
+	return writeTo(sysfsGpioUnexport, fmt.Sprintf("%d", p.pin))
 }
 
-// SetDirection defines whether this particular GPIO is used for input or output (use constants IN and OUT).
+// SetDirection defines whether this particular GPIO is used for input or output (use constants InDirection and OutDirection).
 func (p Gpio) SetDirection(dir string) error {
-	if dir != IN && dir != OUT {
+	if dir != InDirection && dir != OutDirection {
 		return fmt.Errorf("Incorrect direction: %s", dir)
 	}
-	return writeTo(fmt.Sprintf("/sys/class/gpio/gpio%d/direction", p.pin), dir)
+	return writeTo(fmt.Sprintf(sysfsGpioDirection, p.pin), dir)
 }
 
-// SetActiveLevel set the HIGH or LOW active level for IN direction.
+// SetActiveLevel set the ActiveLow or ActiveHigh level for IN direction.
 func (p Gpio) SetActiveLevel(level string) error {
-	if level != ACTIVE_HIGH && level != ACTIVE_LOW {
+	if level != ActiveHigh && level != ActiveLow {
 		return fmt.Errorf("Incorrect active level: %s", level)
 	}
-	return writeTo(fmt.Sprintf("/sys/class/gpio/gpio%d/active_low", p.pin), level)
+	return writeTo(fmt.Sprintf(sysfsGpioActiveLow, p.pin), level)
 }
 
 // Value returns the value of the GPIO
 func (p Gpio) Value() (bool, error) {
-	val, err := readfrom(fmt.Sprintf("/sys/class/gpio/gpio%d/value", p.pin))
+	val, err := readfrom(fmt.Sprintf(sysfsGpioValue, p.pin))
 	if err != nil {
 		return false, err
 	}
 	switch val {
-	case HIGH:
+	case high:
 		return true, nil
-	case LOW:
+	case low:
 		return false, nil
 	default:
 		return false, fmt.Errorf("invalid value: [%v]", val)
@@ -112,10 +132,10 @@ func (p Gpio) Value() (bool, error) {
 
 // Enable this gpio
 func (p Gpio) Enable() error {
-	return writeTo(fmt.Sprintf("/sys/class/gpio/gpio%d/value", p.pin), "1")
+	return writeTo(fmt.Sprintf(sysfsGpioValue, p.pin), high)
 }
 
 // Disable this gpio
 func (p Gpio) Disable() error {
-	return writeTo(fmt.Sprintf("/sys/class/gpio/gpio%d/value", p.pin), "0")
+	return writeTo(fmt.Sprintf(sysfsGpioValue, p.pin), low)
 }

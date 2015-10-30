@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-27 22:18:56
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-29 22:43:45
+* @Last Modified time: 2015-10-21 16:41:12
  */
 
 package main
@@ -43,8 +43,10 @@ import (
 
 var log = logger.Log("systemCalibration")
 
+// Version is the version of this code -- sets at compilation time
 var Version = "unknown"
 
+// Options are the command line options of this tool
 type Options struct {
 	Step        float64 `short:"s" long:"step" description:"step intensity (motor rotation in degree)" required:"true"`
 	Duration    int64   `short:"d" long:"duration" description:"duration (seconds)" required:"true"`
@@ -108,12 +110,12 @@ func main() {
 			}
 		}
 
-		err = g.SetDirection(gpio.IN)
+		err = g.SetDirection(gpio.InDirection)
 		if err != nil {
 			log.Panic(err)
 		}
 
-		err = g.SetActiveLevel(gpio.ACTIVE_HIGH)
+		err = g.SetActiveLevel(gpio.ActiveHigh)
 		if err != nil {
 			log.Panic(err)
 		}
@@ -144,25 +146,36 @@ func main() {
 	steering.SetPanicChan(panicChan)
 
 	////////////////////////////////////////
+	// a fake tracer
+	////////////////////////////////////////
+	tracerChan := make(chan interface{})
+	go func() {
+		for {
+			<-tracerChan
+		}
+	}()
+
+	////////////////////////////////////////
 	// a wonderful gps
 	////////////////////////////////////////
-	gps := gps.New(conf.GpsSerialPort)
+	gps := gps.New(conf.Conf.GpsSerialPort)
 	gps.SetMessagesChan(stepperChan)
 	gps.SetErrorChan(stepperChan)
 	gps.SetPanicChan(panicChan)
+	gps.SetTracerChan(tracerChan)
 
 	////////////////////////////////////////
 	// a crazy stepper
 	////////////////////////////////////////
-	stepper_ := stepper.New()
-	stepper_.SetInputChan(stepperChan)
-	stepper_.SetPanicChan(panicChan)
-	stepper_.SetSteeringChan(steeringChan)
+	stepper := stepper.New()
+	stepper.SetInputChan(stepperChan)
+	stepper.SetPanicChan(panicChan)
+	stepper.SetSteeringChan(steeringChan)
 
 	////////////////////////////////////////
 	// a surprising input
 	////////////////////////////////////////
-	control := control.New(switchGpio, stepper_)
+	control := control.New(switchGpio, stepper)
 	control.SetPanicChan(panicChan)
 
 	// tell the pilot what we are going to do
@@ -175,9 +188,9 @@ When the test is over your are free to resume normal operations.`, opts.Step, op
 	gps.Start()
 	control.Start()
 	steering.Start()
-	stepper_.Start()
+	stepper.Start()
 	defer steering.Shutdown()
-	defer stepper_.Shutdown()
+	defer stepper.Shutdown()
 	defer control.Shutdown()
 
 	go func() {
@@ -202,7 +215,7 @@ When the test is over your are free to resume normal operations.`, opts.Step, op
 		}()
 
 		http.HandleFunc("/", webserver.VersionEndpoint(Version))
-		http.HandleFunc("/calibration", stepper_.CalibrationEndpoint)
+		http.HandleFunc("/calibration", stepper.CalibrationEndpoint)
 		err := http.ListenAndServe(":8000", nil)
 		if err != nil {
 			log.Panic("Already running! or something is living on port 8000 - exiting")
@@ -210,7 +223,7 @@ When the test is over your are free to resume normal operations.`, opts.Step, op
 	}()
 
 	// populate the scenario
-	stepperChan <- stepper.NewStep(opts.Step, time.Duration(opts.Duration)*time.Second, opts.Description)
+	stepper.NewStep(opts.Step, time.Duration(opts.Duration)*time.Second, opts.Description)
 
 	// FUTURE(ssoudan) We can imagine to generate the input from matlab? :)
 

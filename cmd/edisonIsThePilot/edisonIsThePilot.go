@@ -18,22 +18,23 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-18 12:20:59
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-03 22:51:13
+* @Last Modified time: 2015-10-21 16:48:53
  */
 
 package main
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/ssoudan/edisonIsThePilot/alarm"
+	"github.com/ssoudan/edisonIsThePilot/ap100"
 	"github.com/ssoudan/edisonIsThePilot/conf"
 	"github.com/ssoudan/edisonIsThePilot/control"
 	"github.com/ssoudan/edisonIsThePilot/dashboard"
 	"github.com/ssoudan/edisonIsThePilot/drivers/gpio"
 	"github.com/ssoudan/edisonIsThePilot/drivers/motor"
 	"github.com/ssoudan/edisonIsThePilot/drivers/pwm"
+	"github.com/ssoudan/edisonIsThePilot/drivers/sincos"
 	"github.com/ssoudan/edisonIsThePilot/gps"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/logger"
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/pid"
@@ -41,10 +42,12 @@ import (
 	"github.com/ssoudan/edisonIsThePilot/infrastructure/webserver"
 	"github.com/ssoudan/edisonIsThePilot/pilot"
 	"github.com/ssoudan/edisonIsThePilot/steering"
+	"github.com/ssoudan/edisonIsThePilot/tracer"
 )
 
 var log = logger.Log("edisonIsThePilot")
 
+// Version is the version of this code -- sets at compilation time
 var Version = "unknown"
 
 func main() {
@@ -89,19 +92,9 @@ func main() {
 		}
 	}()
 
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				panicChan <- r
-			}
-		}()
-
-		http.HandleFunc("/", webserver.VersionEndpoint(Version))
-		err := http.ListenAndServe(":8000", nil)
-		if err != nil {
-			log.Panic("Already running! or something is living on port 8000 - exiting")
-		}
-	}()
+	ws := webserver.New(Version)
+	ws.SetPanicChan(panicChan)
+	ws.Start()
 
 	////////////////////////////////////////
 	// Init the IO
@@ -123,7 +116,7 @@ func main() {
 			}
 		}
 
-		err = g.SetDirection(gpio.OUT)
+		err = g.SetDirection(gpio.OutDirection)
 		if err != nil {
 			log.Panic(err)
 		}
@@ -181,12 +174,12 @@ func main() {
 			}
 		}
 
-		err = g.SetDirection(gpio.IN)
+		err = g.SetDirection(gpio.InDirection)
 		if err != nil {
 			log.Panic(err)
 		}
 
-		err = g.SetActiveLevel(gpio.ACTIVE_HIGH)
+		err = g.SetActiveLevel(gpio.ActiveHigh)
 		if err != nil {
 			log.Panic(err)
 		}
@@ -254,6 +247,9 @@ func main() {
 	}(conf.AlarmGpioPin, conf.AlarmGpioPWM)
 	defer alarmPwm.Unexport()
 
+	// The compass sincos output interface
+	compass := sincos.New(conf.I2CBus, conf.SinAddress, conf.CosAddress)
+
 	////////////////////////////////////////
 	// a nice and delicate alarm
 	////////////////////////////////////////
@@ -273,6 +269,7 @@ func main() {
 	for m, g := range dashboardGPIOs {
 		dashboard.RegisterMessageHandler(m, g)
 	}
+	ws.SetDashboard(dashboard)
 
 	////////////////////////////////////////
 	// an astonishing steering
@@ -283,26 +280,36 @@ func main() {
 	steering.SetPanicChan(panicChan)
 
 	////////////////////////////////////////
+	// a stunning tracer
+	////////////////////////////////////////
+	tracer := tracer.New(conf.Conf.TraceSize)
+	tracerChan := make(chan interface{})
+	tracer.SetInputChan(tracerChan)
+	tracer.SetPanicChan(panicChan)
+	ws.SetTracer(tracer)
+
+	////////////////////////////////////////
 	// an amazing PID
 	////////////////////////////////////////
 	pidController := pid.New(
-		conf.P,
-		conf.I,
-		conf.D,
-		conf.N,
-		conf.MinPIDOutputLimits,
-		conf.MaxPIDOutputLimits)
+		conf.Conf.P,
+		conf.Conf.I,
+		conf.Conf.D,
+		conf.Conf.N,
+		conf.Conf.MinPIDOutputLimits,
+		conf.Conf.MaxPIDOutputLimits)
 
 	////////////////////////////////////////
 	// a great pilot
 	////////////////////////////////////////
-	thePilot := pilot.New(pidController, conf.Bounds)
+	thePilot := pilot.New(pidController, conf.Conf.Bounds)
 	pilotChan := make(chan interface{})
 	thePilot.SetInputChan(pilotChan)
 	thePilot.SetDashboardChan(dashboardChan)
 	thePilot.SetAlarmChan(alarmChan)
 	thePilot.SetSteeringChan(steeringChan)
 	thePilot.SetPanicChan(panicChan)
+	ws.SetPilot(thePilot)
 
 	////////////////////////////////////////
 	// a surprising input
@@ -311,13 +318,27 @@ func main() {
 	control.SetPanicChan(panicChan)
 
 	////////////////////////////////////////
+	// a friendly interface to the AP100
+	////////////////////////////////////////
+	ap100 := ap100.New(compass)
+	headingChan := make(chan interface{})
+	ap100.SetInputChan(headingChan)
+	ap100.SetPanicChan(panicChan)
+
+	////////////////////////////////////////
 	// a wonderful gps
 	////////////////////////////////////////
-	gps := gps.New(conf.GpsSerialPort)
+	gps := gps.New(conf.Conf.GpsSerialPort)
 	gps.SetMessagesChan(pilotChan)
+	gps.SetHeadingChan(headingChan)
 	gps.SetErrorChan(pilotChan)
 	gps.SetPanicChan(panicChan)
+	gps.SetTracerChan(tracerChan)
 
+	tracer.Start()
+	defer tracer.Shutdown()
+	ap100.Start()
+	defer ap100.Shutdown()
 	gps.Start()
 	control.Start()
 	defer control.Shutdown()

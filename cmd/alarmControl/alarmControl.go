@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-23 11:37:24
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-24 15:20:15
+* @Last Modified time: 2015-10-21 14:21:42
  */
 
 package main
@@ -72,20 +72,20 @@ func main() {
 	}(conf.AlarmGpioPin, conf.AlarmGpioPWM)
 	// defer alarmPwm.Unexport() // Don't do that it can disable the alarms for the autopilot program
 
-	alarm_ := alarm.New(alarmPwm)
+	theAlarm := alarm.New(alarmPwm)
 	alarmChan := make(chan interface{})
-	alarm_.SetInputChan(alarmChan)
-	alarm_.SetPanicChan(panicChan)
+	theAlarm.SetInputChan(alarmChan)
+	theAlarm.SetPanicChan(panicChan)
 
-	alarm_.Start()
+	theAlarm.Start()
 
 	alarmChan <- alarm.NewMessage(true)
 
-	for !alarm_.Enabled() {
+	for !theAlarm.Enabled() {
 		log.Info("Waiting for the alarm to come")
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	alarm_.Shutdown()
+	theAlarm.Shutdown()
 
 }

@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-22 13:24:54
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-10-03 23:37:01
+* @Last Modified time: 2015-10-21 12:59:58
  */
 
 package main
@@ -35,6 +35,7 @@ import (
 
 var log = logger.Log("motorControl")
 
+// Options are the command line options for this tool
 type Options struct {
 	Clockwise  bool    `short:"c" long:"clockwise" description:"clockwise rotation" default:"false"`
 	Speed      uint32  `short:"s" long:"speed" description:"rotation speed pps" default:"600"`

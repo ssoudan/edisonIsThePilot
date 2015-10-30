@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 14:27:34
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 22:17:28
+* @Last Modified time: 2015-10-21 14:16:17
  */
 
 package pilot
@@ -32,9 +32,9 @@ import (
 func TestFixGPS(t *testing.T) {
 
 	cases := []fixCase{
-		fixCase{fix: NOFIX, expectedAlarm: RAISED, expectedLedStatus: true, description: "No fix "},
-		fixCase{fix: FIX, expectedAlarm: UNRAISED, expectedLedStatus: false, description: "Fix"},
-		fixCase{fix: DGPS_FIX, expectedAlarm: UNRAISED, expectedLedStatus: false, description: "DGPS fix"},
+		fixCase{fix: NoFix, expectedAlarm: RAISED, expectedLedStatus: true, description: "No fix "},
+		fixCase{fix: Fix, expectedAlarm: UNRAISED, expectedLedStatus: false, description: "Fix"},
+		fixCase{fix: DGpsFix, expectedAlarm: UNRAISED, expectedLedStatus: false, description: "DGPS fix"},
 	}
 
 	for _, c := range cases {

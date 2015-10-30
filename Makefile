@@ -32,8 +32,13 @@ GOFMT=gofmt -w
 # Package lists
 TOPLEVEL_PKG := github.com/ssoudan/edisonIsThePilot
 INT_LIST :=  #<-- Interface directories
-IMPL_LIST := conf control alarm dashboard pilot gps steering stepper drivers/pwm drivers/gpio drivers/motor  infrastructure/logger infrastructure/pid  #<-- Implementation directories
-CMD_LIST := cmd/edisonIsThePilot cmd/mario cmd/systemCalibration cmd/motorControl cmd/ledControl cmd/motorCalibration cmd/alarmControl #<-- Command directories
+IMPL_LIST := conf control alarm dashboard pilot gps \
+steering stepper drivers/pwm drivers/mcp4725 drivers/sincos \
+drivers/gpio drivers/motor tracer infrastructure/types infrastructure/logger \
+infrastructure/pid  #<-- Implementation directories
+CMD_LIST := cmd/edisonIsThePilot cmd/webserver cmd/mario cmd/ap100Control \
+cmd/systemCalibration cmd/motorControl cmd/ledControl cmd/motorCalibration \
+cmd/alarmControl #<-- Command directories
 
 # List building
 ALL_LIST = $(INT_LIST) $(IMPL_LIST) $(CMD_LIST)
@@ -46,20 +51,29 @@ TEST_LIST = $(foreach int, $(ALL_LIST), $(int)_test)
 FMT_LIST = $(foreach int, $(ALL_LIST), $(int)_fmt)
 
 # All are .PHONY for now because dependencyness is hard
-.PHONY: $(CLEAN_LIST) $(TEST_LIST) $(FMT_LIST) $(INSTALL_LIST) $(BUILD_LIST) $(IREF_LIST)
+.PHONY: $(CLEAN_LIST) $(TEST_LIST) $(FMT_LIST) $(INSTALL_LIST) $(BUILD_LIST) $(IREF_LIST) ui
 
 all: build
-build: $(BUILD_LIST)
+lint: 
+	golint ./...
+ui: 
+	cd ui ; npm install ; npm run bundle
+build: lint $(BUILD_LIST) ui
 clean: $(CLEAN_LIST)
+	rm -f cmd/webserver/*.svg cmd/webserver/*.html cmd/webserver/*.js cmd/webserver/*.log 
+	rm -f cmd/webserver/*.ttf cmd/webserver/*.woff* cmd/webserver/*.eot cmd/webserver/webserver
+	rm -f ui/dist/*
 install: $(INSTALL_LIST)
 test: $(TEST_LIST)
 iref: $(IREF_LIST)
 fmt: $(FMT_LIST)
-deploy: build test
+deploy: build test ui
 	$(SSH) systemctl stop edisonIsThePilot
 	sleep 3
-	$(SCP) mario edisonIsThePilot motorControl systemCalibration alarmControl ledControl motorCalibration edisonIsThePilot.service root@edison.local.:
+
+	$(SCP) mario edisonIsThePilot motorControl systemCalibration alarmControl ledControl motorCalibration edisonIsThePilot.service edisonIsThePilot.properties ui/dist/* root@edison.local.:
 	$(SSH) cp edisonIsThePilot.service /lib/systemd/system
+	$(SSH) cp edisonIsThePilot.properties /etc/
 	$(SSH) systemctl daemon-reload
 	$(SSH) systemctl start edisonIsThePilot
 

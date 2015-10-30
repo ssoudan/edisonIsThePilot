@@ -18,16 +18,19 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 22:05:43
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-20 22:17:27
+* @Last Modified time: 2015-10-21 12:28:50
  */
 
 package pilot
 
+// InputStatus is the course status
 type InputStatus bool
 
 const (
+	// INVALID course
 	INVALID = false
-	VALID   = true
+	// VALID course
+	VALID = true
 )
 
 func validateInput(bound, headingError float64) InputStatus {

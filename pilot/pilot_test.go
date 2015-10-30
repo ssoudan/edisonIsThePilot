@@ -18,7 +18,7 @@ under the License.
 * @Author: Sebastien Soudan
 * @Date:   2015-09-20 09:58:18
 * @Last Modified by:   Sebastien Soudan
-* @Last Modified time: 2015-09-29 10:49:00
+* @Last Modified time: 2015-10-21 14:25:52
  */
 
 package pilot
@@ -155,14 +155,14 @@ func TestThatHeadingIsSetWithFirstGPSHeadingAfterItHasBeenEnabled(t *testing.T) 
 	assert.EqualValues(t, false, pilot.headingSet, "heading need to be set during first updateFeedback")
 
 	gpsHeadingStep1 := 180.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep1, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep1, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, true, pilot.headingSet, "heading has been set to first gpsHeading")
 	assert.EqualValues(t, gpsHeadingStep1, pilot.heading, "heading has been set to first gpsHeading")
 
 	gpsHeading := 170.
 
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, true, pilot.headingSet, "heading has been set to first gpsHeading")
 	assert.EqualValues(t, gpsHeadingStep1, pilot.heading, "heading has been set to first gpsHeading")
@@ -179,10 +179,10 @@ func TestThatPIDControllerIsUpdatedWhenThePilotIsEnabled(t *testing.T) {
 		}
 	}()
 
-	INIT_SP := -2.
-	INIT_VALUE := -1.
+	initSP := -2.
+	initValue := -1.
 
-	controller := testController{sp: INIT_SP, lastValue: INIT_VALUE}
+	controller := testController{sp: initSP, lastValue: initValue}
 
 	pilot := Pilot{
 		alarm:         UNRAISED,
@@ -194,23 +194,23 @@ func TestThatPIDControllerIsUpdatedWhenThePilotIsEnabled(t *testing.T) {
 		inputChan:     make(chan interface{}),
 		pid:           &controller}
 
-	assert.EqualValues(t, INIT_SP, controller.sp, "sp has not yet been modified")
-	assert.EqualValues(t, INIT_VALUE, controller.lastValue, "error (aka PID input value) has not yet been updated")
+	assert.EqualValues(t, initSP, controller.sp, "sp has not yet been modified")
+	assert.EqualValues(t, initValue, controller.lastValue, "error (aka PID input value) has not yet been updated")
 
 	pilot.Start()
 
-	assert.EqualValues(t, INIT_SP, controller.sp, "sp has not yet been modified by Start()")
-	assert.EqualValues(t, INIT_VALUE, controller.lastValue, "error (aka PID input value) has not yet been updated by Start()")
+	assert.EqualValues(t, initSP, controller.sp, "sp has not yet been modified by Start()")
+	assert.EqualValues(t, initValue, controller.lastValue, "error (aka PID input value) has not yet been updated by Start()")
 
 	pilot.enable() // We call the internal synchronous version here
 
-	assert.EqualValues(t, INIT_SP, controller.sp, "sp has not yet been modified by enable()")
-	assert.EqualValues(t, INIT_VALUE, controller.lastValue, "error (aka PID input value) has not yet been updated by enable()")
+	assert.EqualValues(t, initSP, controller.sp, "sp has not yet been modified by enable()")
+	assert.EqualValues(t, initValue, controller.lastValue, "error (aka PID input value) has not yet been updated by enable()")
 
 	assert.EqualValues(t, false, pilot.headingSet, "heading need to be set during first updateFeedback")
 
 	gpsHeadingStep1 := 180.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep1, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep1, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, true, pilot.headingSet, "heading has been set to first gpsHeading")
 	assert.EqualValues(t, gpsHeadingStep1, pilot.heading, "heading has been set to first gpsHeading")
@@ -220,7 +220,7 @@ func TestThatPIDControllerIsUpdatedWhenThePilotIsEnabled(t *testing.T) {
 
 	gpsHeading := 170.
 
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, true, pilot.headingSet, "heading has been set to first gpsHeading")
 	assert.EqualValues(t, gpsHeadingStep1, pilot.heading, "heading has been set to first gpsHeading")
@@ -231,7 +231,7 @@ func TestThatPIDControllerIsUpdatedWhenThePilotIsEnabled(t *testing.T) {
 	pilot.disable()
 
 	gpsHeadingStep3 := 180.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep3, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeadingStep3, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	assert.EqualValues(t, 0., controller.sp, "sp has been set to 0 by the first updateFeedback() call after enable()")
 	assert.EqualValues(t, gpsHeading-gpsHeadingStep1, controller.lastValue, "error has not changed - since Update() has not been called cause the pilot is disabled")
@@ -308,10 +308,10 @@ func TestThatOutOfBoundsGPSInputRaisesAnAlarm(t *testing.T) {
 	pilot.enable()
 
 	gpsHeading := 180.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	gpsHeading = 110.
-	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: conf.MinimumSpeedInKnots * 1.1})
+	pilot.updateFeedback(GPSFeedBackAction{Heading: gpsHeading, Validity: true, Speed: conf.Conf.MinimumSpeedInKnots * 1.1})
 
 	expected := RAISED
 	result := pilot.alarm
@@ -320,10 +320,11 @@ func TestThatOutOfBoundsGPSInputRaisesAnAlarm(t *testing.T) {
 }
 
 type headingCase struct {
-	heading     float64
-	gpsHeading  float64
-	expected    float64
-	description string
+	heading       float64
+	gpsHeading    float64
+	expected      float64
+	headingOffset float64
+	description   string
 }
 
 func checkHeadingCase(t *testing.T, c headingCase) {
@@ -331,22 +332,23 @@ func checkHeadingCase(t *testing.T, c headingCase) {
 	pilot := Pilot{heading: c.heading}
 
 	expected := c.expected
-	result := ComputeHeadingError(pilot.heading, c.gpsHeading)
+	result := ComputeHeadingError(pilot.heading, c.gpsHeading, c.headingOffset)
 
 	assert.EqualValues(t, expected, result, fmt.Sprintf("\"%s\" case failed", c.description))
 }
 
 func TestHeadingErrorComputation(t *testing.T) {
 	cases := []headingCase{
-		headingCase{ /* heading not set*/ gpsHeading: 140., expected: 140., description: "heading not explicit set"},
-		headingCase{heading: 0., gpsHeading: 0., expected: 0., description: "heading equals gpsHeading"},
-		headingCase{heading: 1., gpsHeading: 2., expected: 1., description: "heading NE quadrant, gpsHeading NE quadrant"},
-		headingCase{heading: 1., gpsHeading: 339., expected: -22., description: "heading NE quadrant, gpsHeading NW quadrant"},
-		headingCase{heading: 349., gpsHeading: 359., expected: 10., description: "heading NW quadrant, gpsHeading NW quadrant"},
-		headingCase{heading: 349., gpsHeading: 10., expected: 21., description: "heading NW quadrant, gpsHeading NE quadrant"},
-		headingCase{heading: 1., gpsHeading: 181., expected: 180., description: "limit case"},
-		headingCase{heading: 181., gpsHeading: 1., expected: 180., description: "limit case 2"},
-		headingCase{heading: 130., gpsHeading: 350., expected: -140., description: "limit case 3"},
+		headingCase{ /* heading not set*/ gpsHeading: 140., headingOffset: 0., expected: 140., description: "heading not explicit set"},
+		headingCase{heading: 0., gpsHeading: 0., headingOffset: 0., expected: 0., description: "heading equals gpsHeading"},
+		headingCase{heading: 1., gpsHeading: 2., headingOffset: 0., expected: 1., description: "heading NE quadrant, gpsHeading NE quadrant"},
+		headingCase{heading: 1., gpsHeading: 339., headingOffset: 0., expected: -22., description: "heading NE quadrant, gpsHeading NW quadrant"},
+		headingCase{heading: 349., gpsHeading: 359., headingOffset: 0., expected: 10., description: "heading NW quadrant, gpsHeading NW quadrant"},
+		headingCase{heading: 349., gpsHeading: 359., headingOffset: 10., expected: 20., description: "heading NW quadrant, gpsHeading NW quadrant with positive offset"},
+		headingCase{heading: 349., gpsHeading: 10., headingOffset: 0., expected: 21., description: "heading NW quadrant, gpsHeading NE quadrant"},
+		headingCase{heading: 1., gpsHeading: 181., headingOffset: 0., expected: 180., description: "limit case"},
+		headingCase{heading: 181., gpsHeading: 1., headingOffset: 0., expected: 180., description: "limit case 2"},
+		headingCase{heading: 130., gpsHeading: 350., headingOffset: 0., expected: -140., description: "limit case 3"},
 	}
 
 	for _, c := range cases {
